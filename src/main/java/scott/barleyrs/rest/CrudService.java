@@ -11,16 +11,21 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import javax.xml.soap.Node;
 
 import org.springframework.stereotype.Component;
 
+import scott.barleydb.api.config.Definitions;
 import scott.barleydb.api.config.EntityType;
+import scott.barleydb.api.config.NodeType;
 import scott.barleydb.api.core.Environment;
 import scott.barleydb.api.core.entity.Entity;
 import scott.barleydb.api.core.entity.EntityContext;
 import scott.barleydb.api.exception.SortException;
 import scott.barleydb.api.exception.execution.SortServiceProviderException;
 import scott.barleydb.api.exception.execution.query.SortQueryException;
+import scott.barleydb.api.query.QProperty;
+import scott.barleydb.api.query.QPropertyCondition;
 import scott.barleydb.api.query.QueryObject;
 import scott.barleydb.server.jdbc.query.QueryResult;
 
@@ -63,11 +68,33 @@ public class CrudService {
     @GET
     @Path("/entities/{namespace}/{entityType}/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Entity getEntityById(@PathParam("namespace") String namespace, @PathParam("entityType") String entityTypeName, @PathParam("id") String id) {
+    public Entity getEntityById(@PathParam("namespace") String namespace, @PathParam("entityType") String entityTypeName, @PathParam("id") String id) throws SortException {
         EntityContext ctx = new EntityContext(env, namespace);
-        String interfaceName = namespace + entityTypeName;
-        EntityType entityType = ctx.getDefinitions().getEntityTypeMatchingInterface(interfaceName, true);
-        return ctx.getOrLoad(entityType, id);
+        EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
+        QueryObject<?> qo = new QueryObject<>( entityType.getInterfaceName() );
+        qo.where( keyEquals(entityType, qo, id) );
+        List<Entity> list = ctx.performQuery(qo).getEntityList();
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    /**
+     * Sets a condition where the key of the entity is equal to id.
+     * @param entityType the entity type
+     * @param qo the query object
+     * @param id the key value
+     * @return the condition PK = ID
+     */
+    private QPropertyCondition keyEquals(EntityType entityType , QueryObject<?> qo, String id) {
+        NodeType keyNodeType = entityType.getNodeType( entityType.getKeyNodeName(), true);
+        QProperty<Object> keyProperty = new QProperty<>(qo, entityType.getKeyNodeName());
+        return keyProperty.equal( convert(keyNodeType, id) );
+    }
+
+    private Object convert(NodeType nodeType, String id) {
+        switch (nodeType.getJavaType()) {
+            case LONG: return Long.parseLong( id );
+        }
+        return id;
     }
 
     @GET
@@ -75,10 +102,15 @@ public class CrudService {
     @Produces(MediaType.APPLICATION_JSON)
     public QueryResult<?> listEntities(@PathParam("namespace") String namespace, @PathParam("entityType") String entityTypeName) throws SortException {
         EntityContext ctx = new EntityContext(env, namespace);
-        String interfaceName = namespace + entityTypeName;
-        EntityType entityType = ctx.getDefinitions().getEntityTypeMatchingInterface(interfaceName, true);
-        QueryObject<?> qo = ctx.getUnitQuery(entityType);
-        return ctx.performQuery(qo);
+        EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
+        QueryObject<?> qo = new QueryObject<>( entityType.getInterfaceName() );
+        QueryResult<?> result = ctx.performQuery(qo);
+        return result;
+    }
+
+    private EntityType getEntityType(Definitions definitions, String namespace, String entityTypeName) {
+        String interfaceName = namespace + ".model." + entityTypeName;
+        return definitions.getEntityTypeMatchingInterface(interfaceName, true);
     }
 
 

@@ -61,43 +61,39 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Provider
 @Produces(MediaType.APPLICATION_JSON)
-public class QueryResultMessageBodyWriter implements MessageBodyWriter<QueryResult<?>> {
+public class EntityResultMessageBodyWriter implements MessageBodyWriter<Entity> {
 
     private static final SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 
     private final List<String> namespaces;
 
-    public QueryResultMessageBodyWriter() {
+    public EntityResultMessageBodyWriter() {
         System.out.println("IW NEW!!!");
         this.namespaces = new LinkedList<String>();
         namespaces.add("scott.picdb");
     }
 
     @Override
-    public long getSize(QueryResult<?> arg0, Class<?> arg1, Type arg2, Annotation[] arg3, MediaType arg4) {
+    public long getSize(Entity arg0, Class<?> arg1, Type arg2, Annotation[] arg3, MediaType arg4) {
         return 0; //not needed by jersey
     }
 
     @Override
     public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        boolean result = (mediaType.equals(MediaType.APPLICATION_JSON_TYPE) && type.equals(QueryResult.class));
+        boolean result = (mediaType.equals(MediaType.APPLICATION_JSON_TYPE) && type.equals(Entity.class));
         return result;
     }
 
     @Override
-    public void writeTo(QueryResult<?> result, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException, WebApplicationException {
-        System.out.println("converting QueryResult to JSON");
+    public void writeTo(Entity  result, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException, WebApplicationException {
+        System.out.println("converting Entity to JSON");
         result.getEntityContext().setEntityContextState(EntityContextState.INTERNAL);
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonGenerator gen = mapper.getFactory().createGenerator(entityStream);
-            ArrayNode array = mapper.createArrayNode();
-            for (Entity entity: result.getEntityList()) {
-                Set<Entity> started = new HashSet<>();
-                array.add( toJson(mapper, entity, started) );
-
-            }
-            gen.writeTree(array);
+            Set<Entity> started = new HashSet<>();
+            JsonNode json = toJson(mapper, result, started);
+            gen.writeTree(json);
         }
         finally {
             result.getEntityContext().setEntityContextState(EntityContextState.USER);

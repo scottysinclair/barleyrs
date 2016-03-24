@@ -1,17 +1,14 @@
 package scott.barleyrs.rest;
 
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
-import javax.xml.soap.Node;
 
 import org.springframework.stereotype.Component;
 
@@ -22,8 +19,6 @@ import scott.barleydb.api.core.Environment;
 import scott.barleydb.api.core.entity.Entity;
 import scott.barleydb.api.core.entity.EntityContext;
 import scott.barleydb.api.exception.SortException;
-import scott.barleydb.api.exception.execution.SortServiceProviderException;
-import scott.barleydb.api.exception.execution.query.SortQueryException;
 import scott.barleydb.api.query.QProperty;
 import scott.barleydb.api.query.QPropertyCondition;
 import scott.barleydb.api.query.QueryObject;
@@ -68,13 +63,30 @@ public class CrudService {
     @GET
     @Path("/entities/{namespace}/{entityType}/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Entity getEntityById(@PathParam("namespace") String namespace, @PathParam("entityType") String entityTypeName, @PathParam("id") String id) throws SortException {
+    public Entity getEntityById(
+            @PathParam("namespace") String namespace,
+            @PathParam("entityType") String entityTypeName,
+            @PathParam("id") String id,
+            @QueryParam("proj") String projecting) throws SortException {
+
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
         QueryObject<?> qo = new QueryObject<>( entityType.getInterfaceName() );
+
+        if (projecting != null) {
+            addProjection(qo, projecting);
+        }
+
         qo.where( keyEquals(entityType, qo, id) );
         List<Entity> list = ctx.performQuery(qo).getEntityList();
         return list.isEmpty() ? null : list.get(0);
+    }
+
+    private void addProjection(QueryObject<?> qo, String projecting) {
+        for (String property: projecting.split(",")) {
+            QProperty<Object> prop = new QProperty<>(qo, property);
+            qo.andSelect(prop);
+        }
     }
 
     /**
@@ -100,10 +112,18 @@ public class CrudService {
     @GET
     @Path("/entities/{namespace}/{entityType}/")
     @Produces(MediaType.APPLICATION_JSON)
-    public QueryResult<?> listEntities(@PathParam("namespace") String namespace, @PathParam("entityType") String entityTypeName) throws SortException {
+    public QueryResult<?> listEntities(
+            @PathParam("namespace") String namespace,
+            @PathParam("entityType") String entityTypeName,
+            @QueryParam("proj") String projecting) throws SortException {
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
         QueryObject<?> qo = new QueryObject<>( entityType.getInterfaceName() );
+
+        if (projecting != null) {
+            addProjection(qo, projecting);
+        }
+
         QueryResult<?> result = ctx.performQuery(qo);
         return result;
     }

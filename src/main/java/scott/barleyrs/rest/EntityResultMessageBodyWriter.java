@@ -47,6 +47,7 @@ import javax.ws.rs.ext.Provider;
 import scott.barleydb.api.core.entity.Entity;
 import scott.barleydb.api.core.entity.EntityContextState;
 import scott.barleydb.api.core.entity.Node;
+import scott.barleydb.api.core.entity.NotLoaded;
 import scott.barleydb.api.core.entity.ProxyController;
 import scott.barleydb.api.core.entity.RefNode;
 import scott.barleydb.api.core.entity.ToManyNode;
@@ -172,6 +173,9 @@ public class EntityResultMessageBodyWriter implements MessageBodyWriter<Entity> 
         }
         else if (value instanceof Boolean) {
             jsonEntity.put(node.getName(), (Boolean)value);
+        }
+        else if (value == NotLoaded.VALUE) {
+            //we skip these properties
         }
         else {
             throw new IllegalStateException("Cannot serialize value of type " + value.getClass().getSimpleName());

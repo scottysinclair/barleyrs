@@ -48,7 +48,6 @@ import scott.barleydb.api.core.entity.Entity;
 import scott.barleydb.api.core.entity.EntityContextState;
 import scott.barleydb.api.core.entity.Node;
 import scott.barleydb.api.core.entity.NotLoaded;
-import scott.barleydb.api.core.entity.ProxyController;
 import scott.barleydb.api.core.entity.RefNode;
 import scott.barleydb.api.core.entity.ToManyNode;
 import scott.barleydb.api.core.entity.ValueNode;
@@ -130,10 +129,19 @@ public class QueryResultMessageBodyWriter implements MessageBodyWriter<QueryResu
             Entity reffedEntity = ((RefNode) node).getReference();
             if (reffedEntity != null) {
                 if (reffedEntity.isLoadedOrNew()) {
+                    /*
+                     * we have the entities properties so we convert it to a json object
+                     */
                     JsonNode je = toJson(mapper, reffedEntity, started);
                     if (je != null) {
-                        jsonEntity.put(node.getName(), je);
+                        jsonEntity.set(node.getName(), je);
                     }
+                }
+                else if (reffedEntity.isFetchRequired()){
+                    /*
+                     * a fetch is required, we just output the ID
+                     */
+                    jsonEntity.put(node.getName(), reffedEntity.getKey().getValue().toString());
                 }
             }
             else {
@@ -150,7 +158,7 @@ public class QueryResultMessageBodyWriter implements MessageBodyWriter<QueryResu
                         array.add( je );
                     }
                 }
-                jsonEntity.put(tm.getName(), array);
+                jsonEntity.set(tm.getName(), array);
             }
         }
     }

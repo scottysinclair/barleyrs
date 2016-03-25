@@ -44,21 +44,19 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyWriter;
 import javax.ws.rs.ext.Provider;
 
-import scott.barleydb.api.core.entity.Entity;
-import scott.barleydb.api.core.entity.EntityContextState;
-import scott.barleydb.api.core.entity.Node;
-import scott.barleydb.api.core.entity.NotLoaded;
-import scott.barleydb.api.core.entity.ProxyController;
-import scott.barleydb.api.core.entity.RefNode;
-import scott.barleydb.api.core.entity.ToManyNode;
-import scott.barleydb.api.core.entity.ValueNode;
-import scott.barleydb.server.jdbc.query.QueryResult;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import scott.barleydb.api.core.entity.Entity;
+import scott.barleydb.api.core.entity.EntityContextState;
+import scott.barleydb.api.core.entity.Node;
+import scott.barleydb.api.core.entity.NotLoaded;
+import scott.barleydb.api.core.entity.RefNode;
+import scott.barleydb.api.core.entity.ToManyNode;
+import scott.barleydb.api.core.entity.ValueNode;
 
 @Provider
 @Produces(MediaType.APPLICATION_JSON)
@@ -128,9 +126,16 @@ public class EntityResultMessageBodyWriter implements MessageBodyWriter<Entity> 
                 if (reffedEntity.isLoadedOrNew()) {
                     JsonNode je = toJson(mapper, reffedEntity, started);
                     if (je != null) {
-                        jsonEntity.put(node.getName(), je);
+                        jsonEntity.set(node.getName(), je);
                     }
                 }
+                else if (reffedEntity.isFetchRequired()){
+                    /*
+                     * a fetch is required, we just output the ID
+                     */
+                    jsonEntity.put(node.getName(), reffedEntity.getKey().getValue().toString());
+                }
+
             }
             else {
                 jsonEntity.putNull(node.getName());
@@ -146,7 +151,7 @@ public class EntityResultMessageBodyWriter implements MessageBodyWriter<Entity> 
                         array.add( je );
                     }
                 }
-                jsonEntity.put(tm.getName(), array);
+                jsonEntity.set(tm.getName(), array);
             }
         }
     }

@@ -121,7 +121,7 @@ public class EntityResultMessageBodyWriter implements MessageBodyWriter<Entity> 
             setValue(jsonEntity, node.getName(), (ValueNode)node);
         }
         else if (node instanceof RefNode) {
-            Entity reffedEntity = ((RefNode) node).getReference();
+            Entity reffedEntity = ((RefNode) node).getReference(false);
             if (reffedEntity != null) {
                 if (reffedEntity.isLoadedOrNew()) {
                     JsonNode je = toJson(mapper, reffedEntity, started);

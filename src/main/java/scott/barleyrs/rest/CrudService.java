@@ -116,6 +116,7 @@ public class CrudService {
             @PathParam("namespace") String namespace,
             @PathParam("entityType") String entityTypeName,
             @QueryParam("proj") String projecting) throws SortException {
+
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
         QueryObject<?> qo = new QueryObject<>( entityType.getInterfaceName() );

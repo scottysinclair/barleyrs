@@ -126,7 +126,10 @@ public class QueryResultMessageBodyWriter implements MessageBodyWriter<QueryResu
             setValue(jsonEntity, node.getName(), (ValueNode)node);
         }
         else if (node instanceof RefNode) {
-            Entity reffedEntity = ((RefNode) node).getReference();
+            if (((RefNode)node).getEntityKey() == NotLoaded.VALUE) {
+                return;
+            }
+            Entity reffedEntity = ((RefNode) node).getReference(false);
             if (reffedEntity != null) {
                 if (reffedEntity.isLoadedOrNew()) {
                     /*

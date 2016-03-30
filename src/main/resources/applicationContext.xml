@@ -33,7 +33,7 @@
     <property name="specs">
       <list>
         <!-- <value>/home/scott/dev/projects/picdb/src/test/java/org/example/etl/etlspec.xml</value> -->
-        <value>/home/scott/dev/projects/playspec/src/main/resources/scott/playspec/schema/playspec.xml</value>
+        <value>/home/scott/dev/projects/playspec/src/main/resources/scott/playspec/schema/playspec-spec.xml</value>
       </list>
     </property>
   </bean>

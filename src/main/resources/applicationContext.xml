@@ -29,11 +29,11 @@
 
   <bean id="barleydbBoot" class="scott.barleydb.bootstrap.JdbcEnvironmentBootstrap">
     <property name="dataSource" ref="dataSource"/>
-    <property name="topNamespace" value="scott.picdb"/>
+    <property name="topNamespace" value="scott.playspec"/>
     <property name="specs">
       <list>
         <!-- <value>/home/scott/dev/projects/picdb/src/test/java/org/example/etl/etlspec.xml</value> -->
-        <value>/home/scott/dev/projects/picdb/src/main/java/scott/picdb/schema/picdbspec.xml</value>
+        <value>/home/scott/dev/projects/playspec/src/main/resources/scott/playspec/schema/playspec.xml</value>
       </list>
     </property>
   </bean>

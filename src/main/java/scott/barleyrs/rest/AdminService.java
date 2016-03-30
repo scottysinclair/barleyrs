@@ -9,7 +9,6 @@ import javax.ws.rs.core.MediaType;
 
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -20,6 +19,8 @@ import scott.barleydb.api.config.EntityType;
 import scott.barleydb.api.config.NodeType;
 import scott.barleydb.api.core.Environment;
 import scott.barleydb.api.core.types.JavaType;
+import scott.barleydb.api.specification.EnumSpec;
+import scott.barleydb.api.specification.EnumValueSpec;
 
 /*
  * #%L
@@ -61,7 +62,22 @@ public class AdminService {
 
     }
 
-    public void listEntityTypes() {
+    @GET
+    @Path("/entitytypes/")
+    @Produces(MediaType.APPLICATION_JSON)
+    public JsonNode listEntityTypes() {
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode result = mapper.createArrayNode();
+        for (Definitions defs: env.getDefinitionsSet().getDefinitions()) {
+            for (EntityType entityType: defs.getEntityTypes()) {
+                ObjectNode et = mapper.createObjectNode();
+                et.put("namespace", defs.getNamespace());
+                et.put("fqn", entityType.getInterfaceName());
+                et.put("simpleName", entityType.getInterfaceShortName());
+                result.add( et );
+            }
+        }
+        return result;
     }
 
     /**
@@ -77,8 +93,7 @@ public class AdminService {
             @PathParam("entityType") String entityTypeName) {
 
          Definitions definitions = env.getDefinitions(namespace);
-         String className = namespace + ".model." + entityTypeName;
-         EntityType entityType = definitions.getEntityTypeMatchingInterface(className, true);
+         EntityType entityType = definitions.getEntityTypeMatchingInterface(entityTypeName, true);
 
          ObjectMapper mapper = new ObjectMapper();
 
@@ -101,14 +116,30 @@ public class AdminService {
           */
          ObjectNode properties = mapper.createObjectNode();
          for (NodeType nodeType: entityType.getNodeTypes()) {
-             ObjectNode prop = mapper.createObjectNode();
-             if (nodeType.getJavaType() != null) {
+             if (nodeType.getEnumSpec() != null) {
+                 ObjectNode prop = mapper.createObjectNode();
                  prop.put("type", toJSONSchemaType(nodeType.getJavaType()));
+                 prop.set("enum", enumValuesAsJsonArray(mapper, nodeType.getEnumSpec()));
                  properties.set(nodeType.getName(), prop);
+             }
+             else {
+                 ObjectNode prop = mapper.createObjectNode();
+                 if (nodeType.getJavaType() != null) {
+                     prop.put("type", toJSONSchemaType(nodeType.getJavaType()));
+                     properties.set(nodeType.getName(), prop);
+                 }
              }
          }
          schemaRoot.set("properties", properties);
          return schemaRoot;
+    }
+
+    private ArrayNode enumValuesAsJsonArray(ObjectMapper mapper, EnumSpec enumSpec) {
+        ArrayNode enumValues = mapper.createArrayNode();
+        for (EnumValueSpec ev: enumSpec.getEnumValues()) {
+            enumValues.add( ev.getName() );
+        }
+        return enumValues;
     }
 
     private String toJSONSchemaType(JavaType javaType) {

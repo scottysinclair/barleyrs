@@ -5,6 +5,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import org.springframework.stereotype.Component;
@@ -80,6 +81,7 @@ public class AdminService {
         return result;
     }
 
+
     /**
      * Gets the entity type as a JSON schema.<br/>
      * The schema is compatibly extended with extra barley information.
@@ -90,49 +92,78 @@ public class AdminService {
     @Produces(MediaType.APPLICATION_JSON)
     public JsonNode getEntityTypeJsonSchema(
             @PathParam("namespace") String namespace,
-            @PathParam("entityType") String entityTypeName) {
+            @PathParam("entityType") String entityTypeName,
+            @QueryParam("options") boolean withOptions) {
 
          Definitions definitions = env.getDefinitions(namespace);
          EntityType entityType = definitions.getEntityTypeMatchingInterface(entityTypeName, true);
 
          ObjectMapper mapper = new ObjectMapper();
+         ObjectNode response = mapper.createObjectNode();
 
-         ObjectNode schemaRoot = mapper.createObjectNode();
-         schemaRoot.put("title", "JSON Schema for namepsace " + namespace + " and entity " + entityTypeName);
-         schemaRoot.put("type", "object");
-         /*
-          * required section.
-          */
-         ArrayNode required = mapper.createArrayNode();
+         JsonNode jsonSchema = toJsonSchema(mapper, namespace, entityType);
+         response.set("schema", jsonSchema);
+
+         ObjectNode options = mapper.createObjectNode();
+         ObjectNode fields = mapper.createObjectNode();
          for (NodeType nodeType: entityType.getNodeTypes()) {
-             if (nodeType.isMandatory()) {
-                 required.add( nodeType.getName() );
+             ObjectNode optionsForNode = createOptionsForNode(nodeType, mapper);
+             if (optionsForNode != null) {
+                 fields.set(nodeType.getName(), optionsForNode);
              }
          }
-         schemaRoot.set("required", required);
-
-         /*
-          * properties section
-          */
-         ObjectNode properties = mapper.createObjectNode();
-         for (NodeType nodeType: entityType.getNodeTypes()) {
-             if (nodeType.getEnumSpec() != null) {
-                 ObjectNode prop = mapper.createObjectNode();
-                 prop.put("type", toJSONSchemaType(nodeType.getJavaType()));
-                 prop.set("enum", enumValuesAsJsonArray(mapper, nodeType.getEnumSpec()));
-                 properties.set(nodeType.getName(), prop);
-             }
-             else {
-                 ObjectNode prop = mapper.createObjectNode();
-                 if (nodeType.getJavaType() != null) {
-                     prop.put("type", toJSONSchemaType(nodeType.getJavaType()));
-                     properties.set(nodeType.getName(), prop);
-                 }
-             }
-         }
-         schemaRoot.set("properties", properties);
-         return schemaRoot;
+         options.set("fields", fields);
+         response.set("options", options);
+         return response;
     }
+
+
+    private ObjectNode createOptionsForNode(NodeType nodeType, ObjectMapper mapper) {
+        if (nodeType.getEnumSpec() != null && nodeType.isMandatory()) {
+            ObjectNode opt = mapper.createObjectNode();
+            opt.put("nullOption", false);
+            return opt;
+        }
+        return null;
+    }
+
+    private JsonNode toJsonSchema(ObjectMapper mapper, String namespace, EntityType entityType) {
+        ObjectNode schemaRoot = mapper.createObjectNode();
+        schemaRoot.put("title", "JSON Schema for namepsace " + namespace + " and entity " + entityType.getInterfaceName());
+        schemaRoot.put("type", "object");
+        /*
+         * required section.
+         */
+        ArrayNode required = mapper.createArrayNode();
+        for (NodeType nodeType: entityType.getNodeTypes()) {
+            if (nodeType.isMandatory()) {
+                required.add( nodeType.getName() );
+            }
+        }
+        schemaRoot.set("required", required);
+
+        /*
+         * properties section
+         */
+        ObjectNode properties = mapper.createObjectNode();
+        for (NodeType nodeType: entityType.getNodeTypes()) {
+            if (nodeType.getEnumSpec() != null) {
+                ObjectNode prop = mapper.createObjectNode();
+                prop.put("type", toJSONSchemaType(nodeType.getJavaType()));
+                prop.set("enum", enumValuesAsJsonArray(mapper, nodeType.getEnumSpec()));
+                properties.set(nodeType.getName(), prop);
+            }
+            else {
+                ObjectNode prop = mapper.createObjectNode();
+                if (nodeType.getJavaType() != null) {
+                    prop.put("type", toJSONSchemaType(nodeType.getJavaType()));
+                    properties.set(nodeType.getName(), prop);
+                }
+            }
+        }
+        schemaRoot.set("properties", properties);
+        return schemaRoot;
+   }
 
     private ArrayNode enumValuesAsJsonArray(ObjectMapper mapper, EnumSpec enumSpec) {
         ArrayNode enumValues = mapper.createArrayNode();

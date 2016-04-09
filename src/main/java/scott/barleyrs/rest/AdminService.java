@@ -153,12 +153,15 @@ public class AdminService {
                 prop.set("enum", enumValuesAsJsonArray(mapper, nodeType.getEnumSpec()));
                 properties.set(nodeType.getName(), prop);
             }
-            else {
-                ObjectNode prop = mapper.createObjectNode();
-                if (nodeType.getJavaType() != null) {
+            else if (nodeType.getJavaType() != null) {
+                    ObjectNode prop = mapper.createObjectNode();
                     prop.put("type", toJSONSchemaType(nodeType.getJavaType()));
                     properties.set(nodeType.getName(), prop);
-                }
+            }
+            else if (nodeType.getColumnName() != null && nodeType.getRelationInterfaceName() != null) {
+                ObjectNode prop = mapper.createObjectNode();
+                prop.put("type", "string");
+                properties.set(nodeType.getName(), prop);
             }
         }
         schemaRoot.set("properties", properties);

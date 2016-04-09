@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -120,6 +121,11 @@ public class CrudService {
         if (id == null || (id.isEmpty() && convertEmptyStringToNull)) {
             return null;
         }
+        if (nodeType.getRelationInterfaceName() != null && nodeType.getJdbcType() != null) {
+            EntityType refType = nodeType.getEntityType().getDefinitions().getEntityTypeMatchingInterface(nodeType.getRelationInterfaceName(), true);
+            NodeType keyType = refType.getNodeType( refType.getKeyNodeName(), true );
+            return convert(keyType, id, convertEmptyStringToNull);
+        }
         switch (nodeType.getJavaType()) {
             case STRING : return id;
             case INTEGER: return Integer.parseInt(id);
@@ -177,6 +183,26 @@ public class CrudService {
         ctx.persist(new PersistRequest().save(entity));
 
         return Collections.emptyList();
+    }
+
+    @DELETE
+    @Path("/entities/{namespace}/{entityType}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public boolean delete(
+             @PathParam("namespace") String namespace,
+             @PathParam("entityType") String entityTypeName,
+             @PathParam("id") String id,
+             ObjectNode rootNode) throws SortException {
+
+        EntityContext ctx = new EntityContext(env, namespace);
+        EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
+
+        Entity entity = toEntity(ctx, rootNode, entityType);
+
+        ctx.persist(new PersistRequest().delete(entity));
+
+        return true;
     }
 
     private Entity toEntity(EntityContext ctx, ObjectNode jsObject, EntityType entityType) {

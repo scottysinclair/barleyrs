@@ -160,6 +160,39 @@ public class CrudService {
         return result;
     }
 
+    @GET
+    @Path("/tables/{namespace}/{entityType}/")
+    @Produces(MediaType.APPLICATION_JSON)
+    public QueryResult<?> listTableRow(
+            @PathParam("namespace") String namespace,
+            @PathParam("entityType") String entityTypeName,
+            @QueryParam("proj") String projecting) throws SortException {
+
+        EntityContext ctx = new EntityContext(env, namespace);
+        EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
+        QueryObject<?> qo = new QueryObject<>( entityType.getInterfaceName() );
+        for (NodeType nt: entityType.getNodeTypes()) {
+            /*
+             * add an outer join to all 1:1 refs
+             */
+            if (nt.getRelationInterfaceName() != null && nt.getJdbcType() != null) {
+                EntityType joinTo = ctx.getDefinitions().getEntityTypeMatchingInterface( nt.getRelationInterfaceName(), true);
+                if (joinTo.getNodeType("name", false) != null) {
+                    QueryObject<Object> outerJoinQuery = new QueryObject<>(joinTo.getInterfaceName() );
+                    qo.addLeftOuterJoin(outerJoinQuery, nt.getName());
+                    outerJoinQuery.select(new QProperty<>(outerJoinQuery, "name"));
+                }
+            }
+        }
+
+        if (projecting != null) {
+            addProjection(qo, projecting);
+        }
+
+        QueryResult<?> result = ctx.performQuery(qo);
+        return result;
+    }
+
     private EntityType getEntityType(Definitions definitions, String namespace, String entityTypeName) {
         return definitions.getEntityTypeMatchingInterface(entityTypeName, true);
     }

@@ -22,6 +22,7 @@ import scott.barleydb.api.core.Environment;
 import scott.barleydb.api.core.types.JavaType;
 import scott.barleydb.api.specification.EnumSpec;
 import scott.barleydb.api.specification.EnumValueSpec;
+import scott.barleydb.api.specification.KeyGenSpec;
 
 /*
  * #%L
@@ -119,6 +120,11 @@ public class AdminService {
 
 
     private ObjectNode createOptionsForNode(NodeType nodeType, ObjectMapper mapper) {
+//        if (nodeType.isPrimaryKey() && nodeType.getEntityType().getKeyGenSpec() == KeyGenSpec.FRAMEWORK) {
+//            ObjectNode opt = mapper.createObjectNode();
+//            opt.put("hidden", true);
+//            return opt;
+//        }
         if (nodeType.getEnumSpec() != null && nodeType.isMandatory()) {
             ObjectNode opt = mapper.createObjectNode();
             opt.put("nullOption", false);
@@ -154,9 +160,9 @@ public class AdminService {
                 properties.set(nodeType.getName(), prop);
             }
             else if (nodeType.getJavaType() != null) {
-                    ObjectNode prop = mapper.createObjectNode();
-                    prop.put("type", toJSONSchemaType(nodeType.getJavaType()));
-                    properties.set(nodeType.getName(), prop);
+                ObjectNode prop = mapper.createObjectNode();
+                prop.put("type", toJSONSchemaType(nodeType.getJavaType()));
+                properties.set(nodeType.getName(), prop);
             }
             else if (nodeType.getColumnName() != null && nodeType.getRelationInterfaceName() != null) {
                 ObjectNode prop = mapper.createObjectNode();

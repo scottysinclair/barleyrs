@@ -4,7 +4,9 @@ Provides access to a JDBC supported database over a Restful interface. Uses [Bar
 
 BarleyRS intended for enterprise use as it is designed for pluginable:
 * Audit control of all modifying database operations.
-* Access-control of all modifying operations, access-control of querying operations has yet to be implemented.
+* Access-control of all modifying operations.
+
+Pluginnable access-control of querying operations has yet to be implemented.
 
 It is fully possible to create a ReactJS or IOS client with full back-end CRUD operations implemented in BarleyRS server.
 

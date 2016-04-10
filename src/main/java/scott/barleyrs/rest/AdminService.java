@@ -106,14 +106,16 @@ public class AdminService {
          response.set("schema", jsonSchema);
 
          ObjectNode options = mapper.createObjectNode();
-         ObjectNode fields = mapper.createObjectNode();
-         for (NodeType nodeType: entityType.getNodeTypes()) {
-             ObjectNode optionsForNode = createOptionsForNode(nodeType, mapper);
-             if (optionsForNode != null) {
-                 fields.set(nodeType.getName(), optionsForNode);
+         if (withOptions) {
+             ObjectNode fields = mapper.createObjectNode();
+             for (NodeType nodeType: entityType.getNodeTypes()) {
+                 ObjectNode optionsForNode = createOptionsForNode(nodeType, mapper);
+                 if (optionsForNode != null) {
+                     fields.set(nodeType.getName(), optionsForNode);
+                 }
              }
+             options.set("fields", fields);
          }
-         options.set("fields", fields);
          response.set("options", options);
          return response;
     }

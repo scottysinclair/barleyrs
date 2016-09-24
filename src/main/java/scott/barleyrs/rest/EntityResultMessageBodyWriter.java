@@ -123,7 +123,7 @@ public class EntityResultMessageBodyWriter implements MessageBodyWriter<Entity> 
         else if (node instanceof RefNode) {
             Entity reffedEntity = ((RefNode) node).getReference(false);
             if (reffedEntity != null) {
-                if (reffedEntity.isLoadedOrNew()) {
+                if (reffedEntity.isClearlyUnderstoodIfInDatabaseOrNot()) {
                     JsonNode je = toJson(mapper, reffedEntity, started);
                     if (je != null) {
                         jsonEntity.set(node.getName(), je);

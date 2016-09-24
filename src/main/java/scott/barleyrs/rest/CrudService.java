@@ -28,6 +28,7 @@ import scott.barleydb.api.config.EntityType;
 import scott.barleydb.api.config.NodeType;
 import scott.barleydb.api.core.Environment;
 import scott.barleydb.api.core.entity.Entity;
+import scott.barleydb.api.core.entity.EntityConstraint;
 import scott.barleydb.api.core.entity.EntityContext;
 import scott.barleydb.api.core.entity.Node;
 import scott.barleydb.api.core.entity.RefNode;
@@ -143,34 +144,34 @@ public class CrudService {
     @GET
     @Path("/entities/{namespace}/{entityType}/")
     @Produces(MediaType.APPLICATION_JSON)
-    public QueryResult<?> listEntities(
+    public QueryResult<Object> listEntities(
             @PathParam("namespace") String namespace,
             @PathParam("entityType") String entityTypeName,
             @QueryParam("proj") String projecting) throws SortException {
 
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
-        QueryObject<?> qo = new QueryObject<>( entityType.getInterfaceName() );
+        QueryObject<Object> qo = new QueryObject<>( entityType.getInterfaceName() );
 
         if (projecting != null) {
             addProjection(qo, projecting);
         }
 
-        QueryResult<?> result = ctx.performQuery(qo);
+        QueryResult<Object> result = ctx.performQuery(qo);
         return result;
     }
 
     @GET
     @Path("/tables/{namespace}/{entityType}/")
     @Produces(MediaType.APPLICATION_JSON)
-    public QueryResult<?> listTableRow(
+    public QueryResult<Object> listTableRow(
             @PathParam("namespace") String namespace,
             @PathParam("entityType") String entityTypeName,
             @QueryParam("proj") String projecting) throws SortException {
 
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
-        QueryObject<?> qo = new QueryObject<>( entityType.getInterfaceName() );
+        QueryObject<Object> qo = new QueryObject<>( entityType.getInterfaceName() );
         for (NodeType nt: entityType.getNodeTypes()) {
             /*
              * add an outer join to all 1:1 refs
@@ -189,7 +190,7 @@ public class CrudService {
             addProjection(qo, projecting);
         }
 
-        QueryResult<?> result = ctx.performQuery(qo);
+        QueryResult<Object> result = ctx.performQuery(qo);
         return result;
     }
 
@@ -211,7 +212,7 @@ public class CrudService {
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
 
-        Entity entity = toEntity(ctx, rootNode, entityType);
+        Entity entity = toEntity(ctx, rootNode, entityType, EntityConstraint.mustExistAndDontFetch());
 
         ctx.persist(new PersistRequest().save(entity));
 
@@ -231,14 +232,14 @@ public class CrudService {
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
 
-        Entity entity = toEntity(ctx, rootNode, entityType);
+        Entity entity = toEntity(ctx, rootNode, entityType, EntityConstraint.mustExistAndDontFetch());
 
         ctx.persist(new PersistRequest().delete(entity));
 
         return true;
     }
 
-    private Entity toEntity(EntityContext ctx, ObjectNode jsObject, EntityType entityType) {
+    private Entity toEntity(EntityContext ctx, ObjectNode jsObject, EntityType entityType, EntityConstraint refConstraints) {
         Object keyValue = getEntityKey(jsObject, entityType);
         Entity entity = newEntityInCorrectState(ctx, entityType, keyValue);
 
@@ -258,13 +259,18 @@ public class CrudService {
                     /*
                      * we just refer to a key so set it
                      */
-                    refNode.setEntityKey( convert( eNode.getNodeType(), jsNode.asText(), true ) );
+                    final Object key = convert( eNode.getNodeType(), jsNode.asText(), true );
+                    Entity e = ctx.getEntity(refNode.getEntityType(), key, false);
+                    if (e == null) {
+                        e = ctx.newEntity(refNode.getEntityType(), key, refConstraints);
+                    }
+                    refNode.setReference( e );
                 }
                 else if (jsNode.isObject()) {
                     /*
                      * we refer to a whole object definition, so convert it to an entity.
                      */
-                    Entity reference = toEntity(ctx, ((ObjectNode)jsNode), refNode.getEntityType());
+                    Entity reference = toEntity(ctx, ((ObjectNode)jsNode), refNode.getEntityType(), refConstraints);
                     refNode.setReference( reference );
                 }
                 else {
@@ -283,14 +289,14 @@ public class CrudService {
                          * we just refer to a key so set it
                          */
                         Object key = convertForKey(toManyNode.getEntityType(), element.asText());
-                        Entity e = ctx.getOrCreateBasedOnKeyGenSpec(toManyNode.getEntityType(), key);
+                        Entity e = ctx.getEntityOrNewEntity(toManyNode.getEntityType(), key, EntityConstraint.dontFetch());
                         toManyNode.add( e );
                     }
                     else if (element.isObject()){
                         /*
                          * we just refer to a JSON object so convert it to an entity
                          */
-                        Entity reference = toEntity(ctx, ((ObjectNode)element), toManyNode.getEntityType());
+                        Entity reference = toEntity(ctx, ((ObjectNode)element), toManyNode.getEntityType(), EntityConstraint.mustExistAndDontFetch());
                         toManyNode.add(reference);
                     }
                     else {
@@ -317,28 +323,14 @@ public class CrudService {
                 throw new IllegalStateException("The client should generate the primary key for " + entityType.getInterfaceShortName());
             }
             //there is no PK yet, we know it is a new entity which does not exist in the DB yet
-            entity = ctx.newEntity(entityType);
+            entity = ctx.newEntity(entityType, EntityConstraint.mustNotExistInDatabase());
         }
         else {
             /*
-             * we have a PK value from the client, but we still need to know if we are doing an insert
-             * or an update.
+             * we have a PK value from the client, but we can't say for sure if the
+             * entity exists or not.
              */
-            if (entityType.getKeyGenSpec() == KeyGenSpec.FRAMEWORK) {
-                /*
-                 * barleydb generates the key, as the key is already there we must be doing an update
-                 * of an existing record.
-                 * So we pretend that this entity was loaded from the DB so that an update will be perfomed.
-                 */
-                entity = ctx.newFakeLoadedEntity(entityType, keyValue);
-            }
-            else {
-                /*
-                 * so the client provides the PK always for this entity type. We have no way of knowing if it is an
-                 * insert of an update, so we use the PERHAPS_IN_DATABASE state.
-                 */
-                entity = ctx.newPerhapsInDatabaseEntity(entityType, keyValue);
-            }
+            entity = ctx.newEntity(entityType, keyValue, EntityConstraint.dontFetch());
         }
         return entity;
     }

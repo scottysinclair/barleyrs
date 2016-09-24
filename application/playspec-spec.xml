@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<SpecRegistry>
+    <contents>
+        <Definitions namespace="scott.playspec">
+            <EnumSpecs>
+                <EnumSpec className="scott.playspec.model.EmployeeType">
+                    <enumValues name="ADMIN">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">1</id>
+                    </enumValues>
+                    <enumValues name="ENGINEER">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">2</id>
+                    </enumValues>
+                    <enumValues name="MANAGER">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">3</id>
+                    </enumValues>
+                    <enumValues name="HR">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">4</id>
+                    </enumValues>
+                    <enumValues name="CHIEF">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">5</id>
+                    </enumValues>
+                </EnumSpec>
+                <EnumSpec className="scott.playspec.model.Language">
+                    <enumValues name="ENGLISH">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">1</id>
+                    </enumValues>
+                    <enumValues name="FRENCH">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">2</id>
+                    </enumValues>
+                    <enumValues name="SPANISH">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">3</id>
+                    </enumValues>
+                    <enumValues name="GERMAN">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">4</id>
+                    </enumValues>
+                    <enumValues name="SWISS">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">5</id>
+                    </enumValues>
+                </EnumSpec>
+            </EnumSpecs>
+            <EntitySpecs>
+                <EntitySpec className="scott.playspec.model.Country" tableName="GEN_COUNTRY" abstract="false">
+                    <queryClass>scott.playspec.query.QCountry</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Country.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Country.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="language" javaType="ENUM" jdbcType="INT" columnName="LANGUAGE" nullable="NOT_NULL" optimisticLock="false">
+                            <enumSpec>scott.playspec.model.Language</enumSpec>
+                            <id>scott.playspec.model.Country.language</id>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_COUNTRY" nodes="scott.playspec.model.Country.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Department" tableName="GEN_DEPARTMENT" abstract="false">
+                    <queryClass>scott.playspec.query.QDepartment</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Department.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Department.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="country" jdbcType="BIGINT" columnName="GEN_COUNTRY_ID" nullable="NOT_NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Department.country</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Country" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                        <NodeSpec name="lineOfBusiness" jdbcType="BIGINT" columnName="GEN_LOB_ID" nullable="NOT_NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Department.lineOfBusiness</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.LineOfBusiness" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_DEPARTMENT" nodes="scott.playspec.model.Department.id"/>
+                        <ForeignKey name="FK_GEN_DEPARTMENT_GEN_COUNTRY" fromKey="scott.playspec.model.Department.country" toKey="scott.playspec.model.Country.id"/>
+                        <ForeignKey name="FK_GEN_DEPARTMENT_GEN_LOB" fromKey="scott.playspec.model.Department.lineOfBusiness" toKey="scott.playspec.model.LineOfBusiness.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Employee" tableName="GEN_EMPLOYEE" abstract="false">
+                    <queryClass>scott.playspec.query.QEmployee</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Employee.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="employeeType" javaType="ENUM" jdbcType="INT" columnName="EMPLOYEE_TYPE" nullable="NOT_NULL" optimisticLock="false">
+                            <enumSpec>scott.playspec.model.EmployeeType</enumSpec>
+                            <id>scott.playspec.model.Employee.employeeType</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Employee.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="department" jdbcType="BIGINT" columnName="GEN_DEPARTMENT_ID" nullable="NOT_NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Employee.department</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Department" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                        <NodeSpec name="countryOfOrigin" jdbcType="BIGINT" columnName="GEN_COUNTRY_ID" nullable="NOT_NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Employee.countryOfOrigin</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Country" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                        <NodeSpec name="motherLang" javaType="ENUM" jdbcType="INT" columnName="MOTHER_LANG" nullable="NOT_NULL" optimisticLock="false">
+                            <enumSpec>scott.playspec.model.Language</enumSpec>
+                            <id>scott.playspec.model.Employee.motherLang</id>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_EMPLOYEE" nodes="scott.playspec.model.Employee.id"/>
+                        <ForeignKey name="FK_GEN_EMPLOYEE_GEN_DEPARTMENT" fromKey="scott.playspec.model.Employee.department" toKey="scott.playspec.model.Department.id"/>
+                        <ForeignKey name="FK_GEN_EMPLOYEE_GEN_COUNTRY" fromKey="scott.playspec.model.Employee.countryOfOrigin" toKey="scott.playspec.model.Country.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.LineOfBusiness" tableName="GEN_LOB" abstract="false">
+                    <queryClass>scott.playspec.query.QLineOfBusiness</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.LineOfBusiness.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.LineOfBusiness.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="parent" jdbcType="BIGINT" columnName="PARENT_ID" nullable="NULL" optimisticLock="false">
+                            <id>scott.playspec.model.LineOfBusiness.parent</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.LineOfBusiness" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                        <NodeSpec name="children" optimisticLock="false">
+                            <id>scott.playspec.model.LineOfBusiness.children</id>
+                            <relation type="OWNS" entitySpec="scott.playspec.model.LineOfBusiness" backReference="scott.playspec.model.LineOfBusiness.parent" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_LOB" nodes="scott.playspec.model.LineOfBusiness.id"/>
+                        <ForeignKey name="FK_GEN_LOB_GEN_LOB" fromKey="scott.playspec.model.LineOfBusiness.parent" toKey="scott.playspec.model.LineOfBusiness.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Test1" tableName="GEN_TEST1" abstract="false">
+                    <queryClass>scott.playspec.query.QTest1</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Test1.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Test1.name</id>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_TEST1" nodes="scott.playspec.model.Test1.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Test10" tableName="GEN_TEST10" abstract="false">
+                    <queryClass>scott.playspec.query.QTest10</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Test10.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Test10.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="lastrev" jdbcType="BIGINT" columnName="GEN_TEST9_ID" nullable="NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Test10.lastrev</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Test9" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_TEST10" nodes="scott.playspec.model.Test10.id"/>
+                        <ForeignKey name="FK_GEN_TEST10_GEN_TEST9" fromKey="scott.playspec.model.Test10.lastrev" toKey="scott.playspec.model.Test9.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Test2" tableName="GEN_TEST2" abstract="false">
+                    <queryClass>scott.playspec.query.QTest2</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Test2.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Test2.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="lastrev" jdbcType="BIGINT" columnName="GEN_TEST1_ID" nullable="NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Test2.lastrev</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Test1" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_TEST2" nodes="scott.playspec.model.Test2.id"/>
+                        <ForeignKey name="FK_GEN_TEST2_GEN_TEST1" fromKey="scott.playspec.model.Test2.lastrev" toKey="scott.playspec.model.Test1.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Test3" tableName="GEN_TEST3" abstract="false">
+                    <queryClass>scott.playspec.query.QTest3</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Test3.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Test3.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="lastrev" jdbcType="BIGINT" columnName="GEN_TEST2_ID" nullable="NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Test3.lastrev</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Test2" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_TEST3" nodes="scott.playspec.model.Test3.id"/>
+                        <ForeignKey name="FK_GEN_TEST3_GEN_TEST2" fromKey="scott.playspec.model.Test3.lastrev" toKey="scott.playspec.model.Test2.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Test4" tableName="GEN_TEST4" abstract="false">
+                    <queryClass>scott.playspec.query.QTest4</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Test4.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Test4.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="lastrev" jdbcType="BIGINT" columnName="GEN_TEST3_ID" nullable="NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Test4.lastrev</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Test3" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_TEST4" nodes="scott.playspec.model.Test4.id"/>
+                        <ForeignKey name="FK_GEN_TEST4_GEN_TEST3" fromKey="scott.playspec.model.Test4.lastrev" toKey="scott.playspec.model.Test3.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Test5" tableName="GEN_TEST5" abstract="false">
+                    <queryClass>scott.playspec.query.QTest5</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Test5.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Test5.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="lastrev" jdbcType="BIGINT" columnName="GEN_TEST4_ID" nullable="NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Test5.lastrev</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Test4" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_TEST5" nodes="scott.playspec.model.Test5.id"/>
+                        <ForeignKey name="FK_GEN_TEST5_GEN_TEST4" fromKey="scott.playspec.model.Test5.lastrev" toKey="scott.playspec.model.Test4.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Test6" tableName="GEN_TEST6" abstract="false">
+                    <queryClass>scott.playspec.query.QTest6</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Test6.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Test6.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="lastrev" jdbcType="BIGINT" columnName="GEN_TEST5_ID" nullable="NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Test6.lastrev</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Test5" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_TEST6" nodes="scott.playspec.model.Test6.id"/>
+                        <ForeignKey name="FK_GEN_TEST6_GEN_TEST5" fromKey="scott.playspec.model.Test6.lastrev" toKey="scott.playspec.model.Test5.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Test7" tableName="GEN_TEST7" abstract="false">
+                    <queryClass>scott.playspec.query.QTest7</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Test7.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Test7.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="lastrev" jdbcType="BIGINT" columnName="GEN_TEST6_ID" nullable="NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Test7.lastrev</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Test6" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_TEST7" nodes="scott.playspec.model.Test7.id"/>
+                        <ForeignKey name="FK_GEN_TEST7_GEN_TEST6" fromKey="scott.playspec.model.Test7.lastrev" toKey="scott.playspec.model.Test6.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Test8" tableName="GEN_TEST8" abstract="false">
+                    <queryClass>scott.playspec.query.QTest8</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Test8.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Test8.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="lastrev" jdbcType="BIGINT" columnName="GEN_TEST7_ID" nullable="NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Test8.lastrev</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Test7" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_TEST8" nodes="scott.playspec.model.Test8.id"/>
+                        <ForeignKey name="FK_GEN_TEST8_GEN_TEST7" fromKey="scott.playspec.model.Test8.lastrev" toKey="scott.playspec.model.Test7.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.playspec.model.Test9" tableName="GEN_TEST9" abstract="false">
+                    <queryClass>scott.playspec.query.QTest9</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.playspec.model.Test9.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.playspec.model.Test9.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="lastrev" jdbcType="BIGINT" columnName="GEN_TEST8_ID" nullable="NULL" optimisticLock="false">
+                            <id>scott.playspec.model.Test9.lastrev</id>
+                            <relation type="REFERS" entitySpec="scott.playspec.model.Test8" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_GEN_TEST9" nodes="scott.playspec.model.Test9.id"/>
+                        <ForeignKey name="FK_GEN_TEST9_GEN_TEST8" fromKey="scott.playspec.model.Test9.lastrev" toKey="scott.playspec.model.Test8.id"/>
+                    </Constraints>
+                </EntitySpec>
+            </EntitySpecs>
+        </Definitions>
+    </contents>
+</SpecRegistry>

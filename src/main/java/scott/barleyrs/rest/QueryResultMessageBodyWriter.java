@@ -131,7 +131,7 @@ public class QueryResultMessageBodyWriter implements MessageBodyWriter<QueryResu
             }
             Entity reffedEntity = ((RefNode) node).getReference(false);
             if (reffedEntity != null) {
-                if (reffedEntity.isLoadedOrNew()) {
+                if (reffedEntity.isClearlyUnderstoodIfInDatabaseOrNot()) {
                     /*
                      * we have the entities properties so we convert it to a json object
                      */

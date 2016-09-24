@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<SpecRegistry>
+    <contents>
+        <Definitions namespace="scott.picdb">
+            <EnumSpecs>
+                <EnumSpec className="scott.picdb.model.TagType">
+                    <enumValues name="GENERAl">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">0</id>
+                    </enumValues>
+                    <enumValues name="ALBUMB">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">1</id>
+                    </enumValues>
+                    <enumValues name="PERSON">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">2</id>
+                    </enumValues>
+                    <enumValues name="CATEGORY">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">3</id>
+                    </enumValues>
+                    <enumValues name="PHOTOALBUMB">
+                        <id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:type="xs:int">4</id>
+                    </enumValues>
+                </EnumSpec>
+            </EnumSpecs>
+            <EntitySpecs>
+                <EntitySpec className="scott.picdb.model.Camera" tableName="PDB_CAMERA" abstract="false">
+                    <queryClass>scott.picdb.query.QCamera</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.picdb.model.Camera.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="make" javaType="STRING" jdbcType="VARCHAR" columnName="MAKE" nullable="NULL" length="50" optimisticLock="false">
+                            <id>scott.picdb.model.Camera.make</id>
+                        </NodeSpec>
+                        <NodeSpec name="model" javaType="STRING" jdbcType="VARCHAR" columnName="MODEL" nullable="NULL" length="50" optimisticLock="false">
+                            <id>scott.picdb.model.Camera.model</id>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_CAMERA" nodes="scott.picdb.model.Camera.id"/>
+                        <UniqueConstraint name="UC_CAMERA_1" nodes="scott.picdb.model.Camera.make scott.picdb.model.Camera.model"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.picdb.model.Picture" tableName="PDB_PICTURE" abstract="false">
+                    <queryClass>scott.picdb.query.QPicture</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="STRING" jdbcType="CHAR" columnName="ID" nullable="NOT_NULL" length="50" optimisticLock="false" keyGenSpec="CLIENT" pk="true">
+                            <id>scott.picdb.model.Picture.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="dateTaken" javaType="UTIL_DATE" jdbcType="DATETIME" columnName="DATE_TAKEN" nullable="NOT_NULL" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.dateTaken</id>
+                        </NodeSpec>
+                        <NodeSpec name="dateImported" javaType="UTIL_DATE" jdbcType="DATETIME" columnName="DATE_IMPORTED" nullable="NOT_NULL" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.dateImported</id>
+                        </NodeSpec>
+                        <NodeSpec name="fileName" javaType="STRING" jdbcType="VARCHAR" columnName="FILE_NAME" nullable="NOT_NULL" length="100" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.fileName</id>
+                        </NodeSpec>
+                        <NodeSpec name="primaryAlbumb" jdbcType="BIGINT" columnName="PRIMARY_ALBUMB_ID" nullable="NOT_NULL" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.primaryAlbumb</id>
+                            <relation type="REFERS" entitySpec="scott.picdb.model.PrimaryAlbumb" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                        <NodeSpec name="originalLocation" javaType="STRING" jdbcType="VARCHAR" columnName="ORIGINAL_LOCATION" nullable="NOT_NULL" length="150" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.originalLocation</id>
+                        </NodeSpec>
+                        <NodeSpec name="latitude" javaType="BIGDECIMAL" jdbcType="DECIMAL" columnName="LATITUDE" nullable="NULL" precision="10" scale="5" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.latitude</id>
+                        </NodeSpec>
+                        <NodeSpec name="longitude" javaType="BIGDECIMAL" jdbcType="DECIMAL" columnName="LONGITUDE" nullable="NULL" precision="10" scale="5" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.longitude</id>
+                        </NodeSpec>
+                        <NodeSpec name="orientation" javaType="INTEGER" jdbcType="INT" columnName="ORIENTATION" nullable="NULL" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.orientation</id>
+                        </NodeSpec>
+                        <NodeSpec name="camera" jdbcType="BIGINT" columnName="CAMERA_ID" nullable="NULL" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.camera</id>
+                            <relation type="REFERS" entitySpec="scott.picdb.model.Camera" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                        <NodeSpec name="hasExif" javaType="BOOLEAN" jdbcType="INT" columnName="HAS_EXIF" nullable="NOT_NULL" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.hasExif</id>
+                        </NodeSpec>
+                        <NodeSpec name="pictureData" jdbcType="CHAR" columnName="PICTUREDATA_ID" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.pictureData</id>
+                            <relation type="REFERS" entitySpec="scott.picdb.model.PictureData" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                        <NodeSpec name="tags" optimisticLock="false">
+                            <id>scott.picdb.model.Picture.tags</id>
+                            <relation type="REFERS" entitySpec="scott.picdb.model.PictureTag" backReference="scott.picdb.model.PictureTag.picture" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_PICTURE" nodes="scott.picdb.model.Picture.id"/>
+                        <ForeignKey name="FK_PICTURE_PRIMARY_ALBUMB" fromKey="scott.picdb.model.Picture.primaryAlbumb" toKey="scott.picdb.model.PrimaryAlbumb.id"/>
+                        <ForeignKey name="FK_PICTURE_CAMERA" fromKey="scott.picdb.model.Picture.camera" toKey="scott.picdb.model.Camera.id"/>
+                        <ForeignKey name="FK_PICTURE_PICTUREDATA" fromKey="scott.picdb.model.Picture.pictureData" toKey="scott.picdb.model.PictureData.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.picdb.model.PictureData" tableName="PDB_PICTUREDATA" abstract="false">
+                    <queryClass>scott.picdb.query.QPictureData</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="STRING" jdbcType="CHAR" columnName="ID" nullable="NOT_NULL" length="50" optimisticLock="false" keyGenSpec="CLIENT" pk="true">
+                            <id>scott.picdb.model.PictureData.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="data" javaType="BYTE_ARRAY" jdbcType="BLOB" columnName="DATA" nullable="NOT_NULL" optimisticLock="false">
+                            <id>scott.picdb.model.PictureData.data</id>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_PICTUREDATA" nodes="scott.picdb.model.PictureData.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.picdb.model.PictureTag" tableName="PDB_PICTURE_TAG" abstract="false">
+                    <queryClass>scott.picdb.query.QPictureTag</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.picdb.model.PictureTag.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="picture" jdbcType="CHAR" columnName="PICTURE_ID" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.picdb.model.PictureTag.picture</id>
+                            <relation type="REFERS" entitySpec="scott.picdb.model.Picture" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                        <NodeSpec name="tag" jdbcType="BIGINT" columnName="TAG_ID" nullable="NOT_NULL" optimisticLock="false">
+                            <id>scott.picdb.model.PictureTag.tag</id>
+                            <relation type="REFERS" entitySpec="scott.picdb.model.Tag" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_PICTURE_TAG" nodes="scott.picdb.model.PictureTag.id"/>
+                        <ForeignKey name="FK_PICTURE_TAG_PICTURE" fromKey="scott.picdb.model.PictureTag.picture" toKey="scott.picdb.model.Picture.id"/>
+                        <ForeignKey name="FK_PICTURE_TAG_TAG" fromKey="scott.picdb.model.PictureTag.tag" toKey="scott.picdb.model.Tag.id"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.picdb.model.PrimaryAlbumb" tableName="PDB_PRIMARY_ALBUMB" abstract="false">
+                    <queryClass>scott.picdb.query.QPrimaryAlbumb</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.picdb.model.PrimaryAlbumb.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.picdb.model.PrimaryAlbumb.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="date" javaType="UTIL_DATE" jdbcType="DATETIME" columnName="DATE" nullable="NOT_NULL" optimisticLock="false">
+                            <id>scott.picdb.model.PrimaryAlbumb.date</id>
+                        </NodeSpec>
+                        <NodeSpec name="pictures" optimisticLock="false">
+                            <id>scott.picdb.model.PrimaryAlbumb.pictures</id>
+                            <relation type="REFERS" entitySpec="scott.picdb.model.Picture" backReference="scott.picdb.model.Picture.primaryAlbumb" sortNode="scott.picdb.model.Picture.dateTaken" joinType="LEFT_OUTER_JOIN"/>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_PRIMARY_ALBUMB" nodes="scott.picdb.model.PrimaryAlbumb.id"/>
+                        <UniqueConstraint name="UC_PRIMARY_ALBUMB_1" nodes="scott.picdb.model.PrimaryAlbumb.name scott.picdb.model.PrimaryAlbumb.date"/>
+                    </Constraints>
+                </EntitySpec>
+                <EntitySpec className="scott.picdb.model.Tag" tableName="PDB_TAG" abstract="false">
+                    <queryClass>scott.picdb.query.QTag</queryClass>
+                    <NodeSpecs>
+                        <NodeSpec name="id" javaType="LONG" jdbcType="BIGINT" columnName="ID" nullable="NOT_NULL" optimisticLock="false" keyGenSpec="FRAMEWORK" pk="true">
+                            <suppression>GENERATED_CODE_SETTER</suppression>
+                            <id>scott.picdb.model.Tag.id</id>
+                        </NodeSpec>
+                        <NodeSpec name="name" javaType="STRING" jdbcType="VARCHAR" columnName="NAME" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.picdb.model.Tag.name</id>
+                        </NodeSpec>
+                        <NodeSpec name="type" javaType="ENUM" jdbcType="INT" columnName="TYPE" nullable="NOT_NULL" optimisticLock="false">
+                            <enumSpec>scott.picdb.model.TagType</enumSpec>
+                            <id>scott.picdb.model.Tag.type</id>
+                        </NodeSpec>
+                        <NodeSpec name="value" javaType="STRING" jdbcType="VARCHAR" columnName="VALUE" nullable="NOT_NULL" length="50" optimisticLock="false">
+                            <id>scott.picdb.model.Tag.value</id>
+                        </NodeSpec>
+                    </NodeSpecs>
+                    <Constraints>
+                        <PrimaryKey name="PK_TAG" nodes="scott.picdb.model.Tag.id"/>
+                        <UniqueConstraint name="UC_TAG_1" nodes="scott.picdb.model.Tag.name scott.picdb.model.Tag.type scott.picdb.model.Tag.value"/>
+                    </Constraints>
+                </EntitySpec>
+            </EntitySpecs>
+        </Definitions>
+    </contents>
+</SpecRegistry>

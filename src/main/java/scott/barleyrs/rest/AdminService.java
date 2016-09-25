@@ -168,7 +168,10 @@ public class AdminService {
             }
             else if (nodeType.getColumnName() != null && nodeType.getRelationInterfaceName() != null) {
                 ObjectNode prop = mapper.createObjectNode();
-                prop.put("type", "string");
+
+                final EntityType relatedEntity = env.getDefinitions(namespace).getEntityTypeMatchingInterface(nodeType.getRelationInterfaceName(), true);
+                final NodeType keyNodeType = relatedEntity.getNodeType(relatedEntity.getKeyNodeName(), true);
+                prop.put("type", toJSONSchemaType(keyNodeType.getJavaType()));
                 properties.set(nodeType.getName(), prop);
             }
         }

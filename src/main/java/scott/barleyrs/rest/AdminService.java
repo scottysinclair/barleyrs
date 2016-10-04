@@ -120,6 +120,45 @@ public class AdminService {
          return response;
     }
 
+    /**
+     * Right now this is the fields which will have autosuggest.
+     * @param namespace
+     * @param entityTypeName
+     * @param withOptions
+     * @return
+     */
+    @GET
+    @Path("/entitytypes/{namespace}/{entityType}/detailedInfo")
+    @Produces(MediaType.APPLICATION_JSON)
+    public JsonNode getEntityTypeDetailedInfo(
+            @PathParam("namespace") String namespace,
+            @PathParam("entityType") String entityTypeName,
+            @QueryParam("options") boolean withOptions) {
+
+         Definitions definitions = env.getDefinitions(namespace);
+         EntityType entityType = definitions.getEntityTypeMatchingInterface(entityTypeName, true);
+
+         ObjectMapper mapper = new ObjectMapper();
+         ObjectNode response = mapper.createObjectNode();
+
+         JsonNode jsonSchema = toJsonSchema(mapper, namespace, entityType);
+         response.set("schema", jsonSchema);
+
+         ObjectNode options = mapper.createObjectNode();
+         if (withOptions) {
+             ObjectNode fields = mapper.createObjectNode();
+             for (NodeType nodeType: entityType.getNodeTypes()) {
+                 ObjectNode optionsForNode = createOptionsForNode(nodeType, mapper);
+                 if (optionsForNode != null) {
+                     fields.set(nodeType.getName(), optionsForNode);
+                 }
+             }
+             options.set("fields", fields);
+         }
+         response.set("options", options);
+         return response;
+    }
+
 
     private ObjectNode createOptionsForNode(NodeType nodeType, ObjectMapper mapper) {
 //        if (nodeType.isPrimaryKey() && nodeType.getEntityType().getKeyGenSpec() == KeyGenSpec.FRAMEWORK) {
@@ -127,6 +166,18 @@ public class AdminService {
 //            opt.put("hidden", true);
 //            return opt;
 //        }
+        if (nodeType.getColumnName() != null && nodeType.getRelationInterfaceName() != null) {
+            /*
+             * we are a FK relation to another entity
+             */
+            ObjectNode opt = mapper.createObjectNode();
+            ObjectNode node = mapper.createObjectNode();
+            EntityType et = nodeType.getEntityType().getDefinitions().getEntityTypeMatchingInterface(nodeType.getRelationInterfaceName(), true);
+            node.put("namespace", et.getDefinitions().getNamespace());
+            node.put("entitytype", et.getInterfaceName());
+            opt.set("autosuggest", node);
+            return opt;
+        }
         if (nodeType.getEnumSpec() != null && nodeType.isMandatory()) {
             ObjectNode opt = mapper.createObjectNode();
             opt.put("nullOption", false);

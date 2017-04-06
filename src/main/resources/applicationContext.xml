@@ -31,8 +31,6 @@
 
   <bean id="barleydbBoot" class="scott.barleydb.bootstrap.JdbcEnvironmentBootstrap">
     <property name="dataSource" ref="dataSource"/>
-    <property name="topNamespace" value="${application.namespace}"/>
-    <property name="specs" value="${application.specs}"/>
   </bean>
   <bean id="barleydbEnv" factory-bean="barleydbBoot" factory-method="getEnvironment"/>
 

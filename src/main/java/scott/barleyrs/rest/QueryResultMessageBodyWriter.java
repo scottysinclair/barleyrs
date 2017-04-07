@@ -51,6 +51,8 @@ import scott.barleydb.api.core.entity.NotLoaded;
 import scott.barleydb.api.core.entity.RefNode;
 import scott.barleydb.api.core.entity.ToManyNode;
 import scott.barleydb.api.core.entity.ValueNode;
+import scott.barleydb.api.query.QJoin;
+import scott.barleydb.api.query.QueryObject;
 import scott.barleydb.server.jdbc.query.QueryResult;
 
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -89,12 +91,13 @@ public class QueryResultMessageBodyWriter implements MessageBodyWriter<QueryResu
         System.out.println("converting QueryResult to JSON");
         result.getEntityContext().setEntityContextState(EntityContextState.INTERNAL);
         try {
+            QueryObject<Object> qo = ThreadLocalHelper.get();
             ObjectMapper mapper = new ObjectMapper();
             JsonGenerator gen = mapper.getFactory().createGenerator(entityStream);
             ArrayNode array = mapper.createArrayNode();
             for (Entity entity: result.getEntityList()) {
                 Set<Entity> started = new HashSet<>();
-                array.add( toJson(mapper, entity, started) );
+                array.add( toJson(mapper, entity, qo, started) );
 
             }
             gen.writeTree(array);
@@ -105,14 +108,14 @@ public class QueryResultMessageBodyWriter implements MessageBodyWriter<QueryResu
 
     }
 
-    private JsonNode toJson(ObjectMapper mapper, Entity entity, Set<Entity> started) {
+    private JsonNode toJson(ObjectMapper mapper, Entity entity, QueryObject<Object> qo, Set<Entity> started) {
         if (!started.add(entity)) {
             return null;
         }
         try {
             ObjectNode jsonEntity = mapper.createObjectNode();
             for (Node node: entity.getChildren(Node.class)) {
-               putNode(mapper, jsonEntity, node, started);
+               putNode(mapper, jsonEntity, node, qo, started);
             }
             return jsonEntity;
         }
@@ -121,7 +124,7 @@ public class QueryResultMessageBodyWriter implements MessageBodyWriter<QueryResu
         }
     }
 
-    private void putNode(ObjectMapper mapper, ObjectNode jsonEntity, Node node, Set<Entity> started) {
+    private void putNode(ObjectMapper mapper, ObjectNode jsonEntity, Node node, QueryObject<Object> qo, Set<Entity> started) {
         if (node instanceof ValueNode) {
             setValue(jsonEntity, node.getName(), (ValueNode)node);
         }
@@ -131,20 +134,29 @@ public class QueryResultMessageBodyWriter implements MessageBodyWriter<QueryResu
             }
             Entity reffedEntity = ((RefNode) node).getReference(false);
             if (reffedEntity != null) {
-                if (reffedEntity.isClearlyUnderstoodIfInDatabaseOrNot()) {
-                    /*
-                     * we have the entities properties so we convert it to a json object
-                     */
-                    JsonNode je = toJson(mapper, reffedEntity, started);
-                    if (je != null) {
-                        jsonEntity.set(node.getName(), je);
-                    }
-                }
-                else if (reffedEntity.isFetchRequired()){
+                if (reffedEntity.isFetchRequired()){
                     /*
                      * a fetch is required, we just output the ID
                      */
                     jsonEntity.put(node.getName(), reffedEntity.getKey().getValue().toString());
+                }
+                else {
+                    QJoin joinToNode = getJoin(qo, node);
+                    if (joinToNode != null) {
+                        /*
+                         * we have the entities properties so we convert it to a json object
+                         */
+                        JsonNode je = toJson(mapper, reffedEntity, (QueryObject<Object>)joinToNode.getTo(), started);
+                        if (je != null) {
+                            jsonEntity.set(node.getName(), je);
+                        }
+                    }
+                    else {
+                        /*
+                         * query did not join to the node, so even if it is fetched we return the PK
+                         */
+                        jsonEntity.put(node.getName(), reffedEntity.getKey().getValue().toString());
+                    }
                 }
             }
             else {
@@ -155,8 +167,9 @@ public class QueryResultMessageBodyWriter implements MessageBodyWriter<QueryResu
             ToManyNode tm = (ToManyNode)node;
             if (!tm.getList().isEmpty()) {
                 ArrayNode array = jsonEntity.arrayNode();
+                QJoin joinToNode = getJoin(qo, node);
                 for (Entity e: tm.getList()) {
-                    JsonNode je = toJson(mapper, e, started);
+                    JsonNode je = toJson(mapper, e, (QueryObject<Object>)joinToNode.getTo(), started);
                     if (je != null) {
                         array.add( je );
                     }
@@ -164,6 +177,18 @@ public class QueryResultMessageBodyWriter implements MessageBodyWriter<QueryResu
                 jsonEntity.set(tm.getName(), array);
             }
         }
+    }
+
+    private QJoin getJoin(QueryObject<Object> qo, Node node) {
+        if (qo == null) {
+            return null;
+        }
+        for (QJoin join: qo.getJoins()) {
+            if (join.getFkeyProperty().equals(node.getName())) {
+                return join;
+            }
+        }
+        return null;
     }
 
     private void setValue(ObjectNode jsonEntity, String name, ValueNode node) {

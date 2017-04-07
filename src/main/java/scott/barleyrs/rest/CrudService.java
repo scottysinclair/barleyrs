@@ -158,6 +158,7 @@ public class CrudService {
         }
 
         QueryResult<Object> result = ctx.performQuery(qo);
+        ThreadLocalHelper.set(qo);
         return result;
     }
 
@@ -191,6 +192,7 @@ public class CrudService {
         }
 
         QueryResult<Object> result = ctx.performQuery(qo);
+        ThreadLocalHelper.set(qo);
         return result;
     }
 
@@ -323,7 +325,7 @@ public class CrudService {
                 throw new IllegalStateException("The client should generate the primary key for " + entityType.getInterfaceShortName());
             }
             //there is no PK yet, we know it is a new entity which does not exist in the DB yet
-            entity = ctx.newEntity(entityType, EntityConstraint.mustNotExistInDatabase());
+            entity = ctx.newEntity(entityType, null, EntityConstraint.mustNotExistInDatabase());
         }
         else {
             /*

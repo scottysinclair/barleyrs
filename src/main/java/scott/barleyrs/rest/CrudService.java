@@ -34,9 +34,7 @@ import scott.barleydb.api.core.entity.Node;
 import scott.barleydb.api.core.entity.RefNode;
 import scott.barleydb.api.core.entity.ToManyNode;
 import scott.barleydb.api.core.entity.ValueNode;
-import scott.barleydb.api.exception.SortException;
-import scott.barleydb.api.exception.execution.SortServiceProviderException;
-import scott.barleydb.api.exception.execution.persist.SortPersistException;
+import scott.barleydb.api.exception.BarleyDBException;
 import scott.barleydb.api.persist.PersistRequest;
 import scott.barleydb.api.query.QProperty;
 import scott.barleydb.api.query.QPropertyCondition;
@@ -83,7 +81,7 @@ public class CrudService {
             @PathParam("namespace") String namespace,
             @PathParam("entityType") String entityTypeName,
             @PathParam("id") String id,
-            @QueryParam("proj") String projecting) throws SortException {
+            @QueryParam("proj") String projecting) throws BarleyDBException {
 
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
@@ -147,7 +145,7 @@ public class CrudService {
     public QueryResult<Object> listEntities(
             @PathParam("namespace") String namespace,
             @PathParam("entityType") String entityTypeName,
-            @QueryParam("proj") String projecting) throws SortException {
+            @QueryParam("proj") String projecting) throws BarleyDBException {
 
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
@@ -168,7 +166,7 @@ public class CrudService {
     public QueryResult<Object> listTableRow(
             @PathParam("namespace") String namespace,
             @PathParam("entityType") String entityTypeName,
-            @QueryParam("proj") String projecting) throws SortException {
+            @QueryParam("proj") String projecting) throws BarleyDBException {
 
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
@@ -209,7 +207,7 @@ public class CrudService {
              @PathParam("namespace") String namespace,
              @PathParam("entityType") String entityTypeName,
              @PathParam("id") String id,
-             ObjectNode rootNode) throws SortException {
+             ObjectNode rootNode) throws BarleyDBException {
 
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);
@@ -229,7 +227,7 @@ public class CrudService {
              @PathParam("namespace") String namespace,
              @PathParam("entityType") String entityTypeName,
              @PathParam("id") String id,
-             ObjectNode rootNode) throws SortException {
+             ObjectNode rootNode) throws BarleyDBException {
 
         EntityContext ctx = new EntityContext(env, namespace);
         EntityType entityType = getEntityType(ctx.getDefinitions(), namespace, entityTypeName);

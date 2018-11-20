@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -64,7 +65,8 @@ public class JData {
 		 */
 		DValues noClassPass = root.getAll(path("orderPartViewDTO2s", "voucher", "product_details", "pricing", "no_class", "parts", "passengers"));
 
-		DValues parts = noClassPass.getParentValues();
+		noClassPass.getParentValues().getAll(path("ticket"))
+		  .stream().forEach(it -> System.out.println(it.getActual()));
 		
 		
 		/*
@@ -255,7 +257,7 @@ interface DValue extends DPoint {
 			
 	Stream<? extends DValue> stream();
 
-	DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values);
+	Stream<DGroup> flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values);
 }
 
 class DScalar implements DValue {
@@ -312,9 +314,9 @@ class DScalar implements DValue {
 
 
 	@Override
-	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues otherValues) {
-		return new DGroups(otherValues.stream()
-				.map(ov -> new DGroup(myGroupKey, this, otherGroupKey, ov)));
+	public Stream<DGroup> flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues otherValues) {
+		return otherValues.stream()
+				.map(ov -> new DGroup(myGroupKey, this, otherGroupKey, ov));
 	}
 
 	@Override
@@ -371,8 +373,7 @@ abstract class DValues {
 		// for each id, stream otherValues
 		return new DGroups(
         	stream()
-             .map(v -> v.flatMapThenMerge(myGroupKey, otherGroupKey, otherValues))
-            .flatMap(DGroups::stream));
+             .flatMap(v -> v.flatMapThenMerge(myGroupKey, otherGroupKey, otherValues)));
 	}
 
 	public abstract DValues getAll(DPath rest);
@@ -496,7 +497,7 @@ class DGroup extends DValues implements DValue  {
 	}
 
 	@Override
-	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
+	public Stream<DGroup> flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
 		return null;
 	}
 
@@ -713,7 +714,7 @@ class DArray extends DValues implements DValue {
 	}
 
 	@Override
-	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
+	public Stream<DGroup> flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
 		return null;
 	}
 
@@ -828,7 +829,7 @@ class DMap implements DValue {
 	}
 
 	@Override
-	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
+	public Stream<DGroup> flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
 		return null;
 	}
 

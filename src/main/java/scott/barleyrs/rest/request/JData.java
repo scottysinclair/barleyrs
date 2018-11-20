@@ -1,20 +1,23 @@
 package scott.barleyrs.rest.request;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
 import static java.util.Arrays.asList;
 import static scott.barleyrs.rest.request.DPath.path;
 import static scott.barleyrs.rest.request.DPred.matches;
-import static scott.barleyrs.rest.request.Helper.collectAndPrint;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JData {
 
@@ -97,6 +100,20 @@ public class JData {
 				"  CHALLENGED = " + p.get(path("challenged")).getActual());		
 	}
 }
+
+class DStreamHolder<T> {
+//	private List<T> asList;
+	private Stream<T> asStream;
+	public DStreamHolder(Stream<T> stream) {
+		this.asStream = stream;
+//		this.asList = stream.collect(Collectors.toList());
+	}
+	
+	public Stream<T> stream() {
+//		return asList.stream();
+		return asStream;
+	}
+} 
 
 class Helper {
 	public static <T> Stream<T> collectAndPrint(Object ctx, Stream<T> stream) {
@@ -293,12 +310,8 @@ class DScalar implements DValue {
 
 	@Override
 	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues otherValues) {
-		//DGroup group = new DGroup(myGroupKey, this, otherGroupKey, otherValues);
-		DValue me = this;
-		List<DGroup> groups = otherValues.stream()
-				.map(ov -> new DGroup(myGroupKey, me, otherGroupKey, ov))
-				.collect(Collectors.toList());
-		return new DGroups(groups);
+		return new DGroups(otherValues.stream()
+				.map(ov -> new DGroup(myGroupKey, this, otherGroupKey, ov)));
 	}
 
 	@Override
@@ -354,8 +367,7 @@ abstract class DValues {
 		return new DGroups(
         	stream()
              .map(v -> v.flatMapThenMerge(myGroupKey, otherGroupKey, otherValues))
-            .flatMap(DGroups::stream)
-			.collect(Collectors.toList()));
+            .flatMap(DGroups::stream));
 	}
 
 	public abstract DValues getAll(DPath rest);
@@ -416,11 +428,10 @@ class DAdhocValues extends DValues {
  * A stream of groups
  */
 class DGroups extends DValues  {
-	private final List<DGroup> groups;
+	private final DStreamHolder<DGroup> groups;
 
-	public DGroups(List<DGroup> groups) {
-		this.groups = groups;
-		//this.groups = collectAndPrint(this, groups);
+	public DGroups(Stream<DGroup> groups) {
+		this.groups = new DStreamHolder<>(groups);
 	}
 
 	@Override
@@ -546,10 +557,9 @@ class DFieldAcrossValues extends DValues {
 
 	@Override
 	public Stream<? extends DValue> stream() {
-		return collectAndPrint(this, parent.stream())
+		return parent.stream()
 				//for each DV get all values for the field
-				.map(dv -> 
-					dv.getAll(path(field)))
+				.map(dv ->  dv.getAll(path(field)))
 				//flatmap to stream dv
 				.flatMap(DValues::stream);
 	}
@@ -588,7 +598,7 @@ class DFilter extends DValues {
 
 	@Override
 	public Stream<? extends DValue> stream() {
-		return collectAndPrint(this, source.stream()).filter(predicate);
+		return source.stream().filter(predicate);
 	}
 }
 
@@ -773,9 +783,6 @@ class DMap implements DValue {
 	@Override
 	public Stream<DValue> stream() {
 		return Collections.<DValue>singletonList(this).stream();
-		//each DValue has this map as it's parent and it's field is the map key.
-//		return data.entrySet().stream()
-//				.map(en -> DValueFac.asValue(this, en.getKey(), en.getValue()));
 	}
 
 	@Override

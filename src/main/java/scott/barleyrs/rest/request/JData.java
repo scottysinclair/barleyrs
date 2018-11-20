@@ -1,5 +1,10 @@
 package scott.barleyrs.rest.request;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -16,7 +21,7 @@ import static scott.barleyrs.rest.request.DPred.matches;
 
 public class JData {
 
-	public static void main(String args[]) {
+	public static void main(String args[]) throws IOException {
 
 		/*
 		DMap root = new DMap(null, null, new HashMap<>());
@@ -48,11 +53,17 @@ public class JData {
 		//voucherids  <- (id subt*)*  <- (id subt)* <- CHECK (id subt)*
 */
 
-		DValue root = null;
+		File from = new File("src/test/resources/misc.json");
+		ObjectMapper mapper = new ObjectMapper();
+		TypeReference<HashMap<String,Object>> typeRef
+				= new TypeReference<HashMap<String,Object>>() {};
+		HashMap<String,Object> rootData = mapper.readValue(from, typeRef);
 
-		DValues voucherIds = root.get(path("vouchers", "id")).asValues();
+		DValue root = DValueFac.asValue(null, null, rootData);
 
-		DValues subTickets = root.get(path("tickets", "subtickets")).asValues();
+		DValues voucherIds = root.getAll(path("vouchers", "id"));
+
+		DValues subTickets = root.getAll(path("tickets", "subtickets"));
 
 		voucherIds
 				// to groups of (vid, subTicket)*
@@ -139,6 +150,13 @@ class DPath {
 		}
 		return next;
 	}
+
+	public String toString() {
+		if (next == null) {
+			return name;
+		}
+		return name + " -> " + next.toString();
+	}
 }
 
 class DPred {
@@ -213,8 +231,6 @@ interface DValue extends DPoint {
 	Object getActual();
 			
 	Stream<? extends DValue> stream();
-	
-	DValues asValues();
 
 	DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values);
 }
@@ -277,13 +293,28 @@ class DScalar implements DValue {
 
 	@Override
 	public DValue get(DPath path) {
-		return null;
+		DPath first = path.first();
+		DValue value = DValueFac.asValue(this, first.name(), null);
+		if (path.size() == 1) {
+			return value;
+		}
+		else {
+			DPath rest = path.tail();
+			return value.get(rest);
+		}
 	}
 
 	@Override
 	public DValues getAll(DPath path) {
-		// TODO Auto-generated method stub
-		return null;
+		DPath first = path.first();
+		DValue value = DValueFac.asValue(this, first.name(), null);
+		if (path.size() == 1) {
+			return new DEmptyValues(this, first.name());
+		}
+		else {
+			DPath rest = path.tail();
+			return value.getAll(rest);
+		}
 	}
 
 	@Override
@@ -292,11 +323,8 @@ class DScalar implements DValue {
 		return null;
 	}
 
-	@Override
-	public DValues asValues() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+
+
 }
 
 abstract class DValues {
@@ -321,6 +349,30 @@ abstract class DValues {
 				.map(v -> v.flatMapThenMerge(myGroupKey, otherGroupKey, otherValues))
 				.flatMap(DGroups::stream));
 
+	}
+
+}
+
+class DEmptyValues extends DValues {
+	private DPoint parent;
+	private String field;
+
+	public DEmptyValues(DPoint parent, String field) {
+		this.parent = parent;
+		this.field = field;
+	}
+
+	@Override
+	public Stream<? extends DValue> stream() {
+		return Collections.<DValue>emptyList().stream();
+	}
+
+	@Override
+	public String toString() {
+		if (parent == null) {
+			return "DEmptyValues";
+		}
+		return parent.toString() + " <- " + "DEmptyValues";
 	}
 }
 
@@ -402,10 +454,6 @@ class DGroup implements DValue  {
 		return null;
 	}
 
-	@Override
-	public DValues asValues() {
-		return null;
-	}
 }
 
 
@@ -487,13 +535,6 @@ class DArrayItem implements DValue {
 
 	@Override
 	public Stream<DValue> stream() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-
-	@Override
-	public DValues asValues() {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -582,12 +623,6 @@ class DArray extends DValues implements DValue {
 	public Object getActual() {
 		return list;
 	}
-
-	@Override
-	public DValues asValues() {
-		// TODO Auto-generated method stub
-		return null;
-	}
 }
 
 class DValueFac {
@@ -650,8 +685,20 @@ class DMap implements DValue {
 
 	@Override
 	public DValues getAll(DPath path) {
-		// TODO Auto-generated method stub
-		return null;
+		DPath first = path.first();
+		DValue value = DValueFac.asValue(this, first.name(), data.get(first.name()));
+		if (path.size() == 1) {
+		  if (value instanceof DArray) {
+			return (DArray)value;
+		  }
+		  else {
+			return new DArray(this, "asarray", Collections.singletonList(value.getActual()));
+		  }
+		}
+		else {
+			DPath rest = path.tail();
+			return value.getAll(rest);
+		}
 	}
 
 	@Override
@@ -677,11 +724,5 @@ class DMap implements DValue {
 		return null;
 	}
 
-	@Override
-	public DValues asValues() {
-		// TODO Auto-generated method stub
-		return null;
-	}	
-	
 }
 

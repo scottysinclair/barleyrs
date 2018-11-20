@@ -32,6 +32,7 @@
   <bean id="barleydbBoot" class="scott.barleydb.bootstrap.JdbcEnvironmentBootstrap">
     <property name="dataSource" ref="dataSource"/>
     <property name="ddlGen" value="${ddlgen}"/>
+    <property name="quickHackSequenceGenerator" value="false"/>
   </bean>
   <bean id="barleydbEnv" factory-bean="barleydbBoot" factory-method="getEnvironment"/>
 

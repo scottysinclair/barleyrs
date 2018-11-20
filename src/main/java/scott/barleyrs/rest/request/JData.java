@@ -4,42 +4,82 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.annotation.security.PermitAll;
+import static java.util.Arrays.asList;
+import static scott.barleyrs.rest.request.DPath.path;
+import static scott.barleyrs.rest.request.DPred.matches;
 
 public class JData {
 
 	public static void main(String args[]) {
-		
+
+		/*
 		DMap root = new DMap(null, null, new HashMap<>());
 
-		DValues values1 = root.get("tickets", "subtickets").asValues();
+		DValues values1 = root.get(path("tickets", "subtickets")).asValues();
 		
-		DValues voucherIds = root.get("vouchers", "id").asValues();
+		DValues voucherIds = root.get(path("vouchers", "id")).asValues();
 		
-		root.get("tickets", "subtickets")
+		root.get(path("tickets", "subtickets"))
 		  .stream()
-		    .filter(dv -> dv.get("voucherid").matchesOneOf(voucherIds));
+		    .filter(dv -> dv.get(path("voucherid")).matchesOneOf(voucherIds));
 
 		
-		root.get("tickets", "subtickets").asValues()
+		root.get(path("tickets", "subtickets")).asValues()
 			.withMatching("voucherid", voucherIds)
 			 .stream();
-		
+
+		//value <- array <- array <- filter <- single
+
+		//values <- filter (eq 3)
+		//values <- filter (eq (point + path))
+
+		//voucherids <- group (voucherids + values) <- get (filter (eq (value path), voucherid))
+		//voucherids <- group (voucherids  values) <- get ("values" <- filter (eq (value path), "voucherids"))
+
+
+		//voucherids <- (group (vid  values))* <- filter ("values " (eq (value path), "voucherids"))) getSingle
+
+		//voucherids  <- (id subt*)*  <- (id subt)* <- CHECK (id subt)*
+*/
+
+		DValue root = null;
+
+		DValues voucherIds = root.get(path("vouchers", "id")).asValues();
+
+		DValues subTickets = root.get(path("tickets", "subtickets")).asValues();
+
+		voucherIds
+				// to groups of (vid, subTicket)*
+				.crossProduct("vid", "subTickets", subTickets)
+
+				//filter where (vid == subTicket.id
+				.filter(matches(path("vid"), path("subTickets", "id")));
+
+
+		/*
+		root.get(path("tickets", "subtickets"))
+				.asValues()
+				.filter(DPred.matches(3));
+
+
+		root.get(path("tickets", "subtickets"))
+				.asValues()
+				.filter(DPred.matches(path("voucherid")));
+*/
+
+		/*
 		voucherIds.stream()
 		  .map(root.get("tickets", "subtickets")
 				  	.asValues()
 				  	.withMatchingField("voucherid"))
 		  			.singleValue();
-				//value <- arraxy <- array <- filter <- single
+		  			*/
 		/*
 		 * 
 		 * TODO
@@ -53,6 +93,71 @@ public class JData {
 	}
 }
 
+//p -> p -> p
+class DPath {
+
+	private final DPath next;
+	private final String name;
+
+	public DPath(DPath next, String name) {
+		this.next = next;
+		this.name = name;
+	}
+
+	public DPath next() {
+		return next;
+	}
+
+	public String name() {
+		return name;
+	}
+
+	public static DPath path(String ...names) {
+		DPath next = null;
+		List<String> rev = new ArrayList<>(asList(names));
+		Collections.reverse(rev);
+		for (String name: rev) {
+			next = new DPath(next, name);
+		}
+		return next;
+	}
+
+	public DPath first() {
+		return this;
+	}
+
+	public int size() {
+		if (next == null) {
+		  return 1;
+		}
+		return next.size() + 1;
+	}
+
+	public DPath tail() {
+		if (next == null) {
+			return null;
+		}
+		return next;
+	}
+}
+
+class DPred {
+
+
+
+	/**
+	 * @return
+	 */
+	public static Predicate<DValue> matches(DValue value) {
+		return (dv) -> dv.matches( value );
+	}
+
+	public static Predicate<DValue> matches(DPath pathA, DPath pathB) {
+		return (dv) -> dv.get(pathA).matches(dv.get(pathB));
+	}
+
+}
+
 /**
  * a point in the data hierarchy from where to search
  * @author scott
@@ -61,9 +166,9 @@ public class JData {
 interface DPoint {
 	DPoint getParent();
 
-	DValue get(String ...name);
+	DValue get(DPath path);
 
-	DValues getAll(String ...name);
+	DValues getAll(DPath path);
 }
 
 class EmptyPoint implements DPoint {
@@ -80,13 +185,13 @@ class EmptyPoint implements DPoint {
 	}
 
 	@Override
-	public DValue get(String ...names) {
+	public DValue get(DPath path) {
 		//TODO: propertly nest
-		return new DScalar(this, names[0], null);
+		return new DScalar(this, path.first().name(), null);
 	}
 
 	@Override
-	public DValues getAll(String... name) {
+	public DValues getAll(DPath path) {
 		//TODO:
 		return null;
 	}
@@ -99,13 +204,19 @@ interface DValue extends DPoint {
 
 	boolean matchesOneOf(DValues values);
 
+	boolean matches(DValue value);
+
+	boolean matches(Object object);
+
 	String getField();
 
 	Object getActual();
 			
-	Stream<DValue> stream();
+	Stream<? extends DValue> stream();
 	
 	DValues asValues();
+
+	DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values);
 }
 
 class DScalar implements DValue {
@@ -129,6 +240,16 @@ class DScalar implements DValue {
 	}
 
 	@Override
+	public boolean matches(DValue value) {
+		return false;
+	}
+
+	@Override
+	public boolean matches(Object object) {
+		return false;
+	}
+
+	@Override
 	public DPoint getParent() {
 		return parent;
 	}
@@ -146,14 +267,21 @@ class DScalar implements DValue {
 	public Stream<DValue> stream() {
 		return Collections.<DValue>singletonList(this).stream();
 	}
-	
+
+
 	@Override
-	public DValue get(String... name) {
+	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues otherValues) {
+		return new DGroups(stream()
+				.map(v -> new DGroup(myGroupKey, this, otherGroupKey, otherValues)));
+	}
+
+	@Override
+	public DValue get(DPath path) {
 		return null;
 	}
 
 	@Override
-	public DValues getAll(String... name) {
+	public DValues getAll(DPath path) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -177,20 +305,109 @@ abstract class DValues {
 		return new DFilter(this, predicate);
 	}
 	
-	public Function<DValue,DValue> withMatchingField(String fieldName) {
-		return (dv) -> 
-			new LinkedList<DValue>().stream()
-				.filter(mydv -> mydv.get(fieldName).equals(dv))
-				.findFirst()
-				.orElse(null);
+	public DFilter withMatchingField(String fieldName) {
+		return new DFilter(this, (dv ) -> dv.get(path(fieldName)).matches(null));
 	}
 
 	public DFilter withMatching(String string, DValues values) {
+		return new DFilter(this, (dv ) -> dv.matchesOneOf(values));
+	}
+
+	public abstract Stream<? extends DValue> stream();
+
+	public DGroups crossProduct(String myGroupKey, String otherGroupKey, DValues otherValues) {
+		//for each id, stream otherValues
+		return new DGroups(stream()
+				.map(v -> v.flatMapThenMerge(myGroupKey, otherGroupKey, otherValues))
+				.flatMap(DGroups::stream));
+
+	}
+}
+
+
+/**
+ * A stream of groups
+ */
+class DGroups extends DValues  {
+	private final Stream<DGroup> groups;
+
+	public DGroups(Stream<DGroup> groups) {
+		this.groups = groups;
+	}
+
+	@Override
+	public Stream<DGroup> stream() {
+		return groups;
+	}
+}
+
+/**
+ *  group of data
+ */
+class DGroup implements DValue  {
+	private final Map<Object, Object> contents = new HashMap<>();
+
+	public DGroup(String valueAKey, DValue a, String valueBKey, DValues b) {
+		contents.put(valueAKey, a);
+		contents.put(valueBKey, b);
+	}
+
+	@Override
+	public Stream<DGroup> stream() {
+		return Collections.singletonList(this).stream();
+	}
+
+	@Override
+	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
 		return null;
 	}
 
-	public abstract Stream<DValue> stream();
+	@Override
+	public DValue get(DPath path) {
+		return null;
+	}
+
+	@Override
+	public DValues getAll(DPath path) {
+		return null;
+	}
+
+	@Override
+	public DPoint getParent() {
+		return null;
+	}
+
+	@Override
+	public boolean matchesOneOf(DValues values) {
+		return false;
+	}
+
+	@Override
+	public boolean matches(DValue value) {
+		return false;
+	}
+
+	@Override
+	public boolean matches(Object object) {
+		return false;
+	}
+
+	@Override
+	public String getField() {
+		return null;
+	}
+
+	@Override
+	public Object getActual() {
+		return null;
+	}
+
+	@Override
+	public DValues asValues() {
+		return null;
+	}
 }
+
 
 class DFilter extends DValues {
 	private final DValues source;
@@ -202,7 +419,7 @@ class DFilter extends DValues {
 	}
 
 	@Override
-	public Stream<DValue> stream() {
+	public Stream<? extends DValue> stream() {
 		return source.stream().filter(predicate);
 	}
 	
@@ -224,20 +441,28 @@ class DArrayItem implements DValue {
 		return false;
 	}
 
+	@Override
+	public boolean matches(DValue value) {
+		return false;
+	}
 
+	@Override
+	public boolean matches(Object object) {
+		return false;
+	}
 
 	private static Object getValue(DArray array, int index) {
 		return null;
 	}
 
 	@Override
-	public DValue get(String... name) {
+	public DValue get(DPath path) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public DValues getAll(String... name) {
+	public DValues getAll(DPath path) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -273,6 +498,10 @@ class DArrayItem implements DValue {
 		return null;
 	}
 
+	@Override
+	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
+		return null;
+	}
 }
 
 class DArray extends DValues implements DValue {
@@ -293,18 +522,28 @@ class DArray extends DValues implements DValue {
 
 
 	@Override
+	public boolean matches(DValue value) {
+		return false;
+	}
+
+	@Override
+	public boolean matches(Object object) {
+		return false;
+	}
+
+	@Override
 	public DPoint getParent() {
 		return parent;
 	}
 
 	@Override
-	public DValue get(String... name) {
+	public DValue get(DPath path) {
 		return null;
 	}
 
 	
 	@Override
-	public DValues getAll(String... name) {
+	public DValues getAll(DPath path) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -325,7 +564,12 @@ class DArray extends DValues implements DValue {
 		//TODO: natively use stream
 		return toDArrayItems().stream();
 	}
-	
+
+	@Override
+	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
+		return null;
+	}
+
 	private List<DValue> toDArrayItems() {
 		List<DValue> result = new ArrayList<>(list.size());
 		for (int i=0; i<list.size(); i++) {
@@ -377,26 +621,35 @@ class DMap implements DValue {
 	}
 
 	@Override
+	public boolean matches(DValue value) {
+		return false;
+	}
+
+	@Override
+	public boolean matches(Object object) {
+		return false;
+	}
+
+	@Override
 	public DPoint getParent() {
 		return parent;
 	}
 
 	@Override
-	public DValue get(String ...names) {
-		LinkedList<String> parts = new LinkedList<>(Arrays.asList(names));
-		String name = parts.getFirst();
-		DValue value = DValueFac.asValue(this, name, data.get(name));
-		if (parts.size() == 1) {
+	public DValue get(DPath path) {
+		DPath first = path.first();
+		DValue value = DValueFac.asValue(this, first.name(), data.get(first.name()));
+		if (path.size() == 1) {
 			return value;
 		}
 		else {
-			List<String> rest = parts.subList(1,  names.length);
-			return value.get(rest.toArray(new String[rest.size()]));
+			DPath rest = path.tail();
+			return value.get(rest);
 		}
 	}
 
 	@Override
-	public DValues getAll(String... name) {
+	public DValues getAll(DPath path) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -420,9 +673,15 @@ class DMap implements DValue {
 	}
 
 	@Override
+	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
+		return null;
+	}
+
+	@Override
 	public DValues asValues() {
 		// TODO Auto-generated method stub
 		return null;
 	}	
 	
 }
+

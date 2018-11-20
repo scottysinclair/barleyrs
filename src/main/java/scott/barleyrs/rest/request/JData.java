@@ -1,5 +1,6 @@
 package scott.barleyrs.rest.request;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -12,29 +13,33 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.annotation.security.PermitAll;
+
 public class JData {
 
 	public static void main(String args[]) {
 		
-		DMap root = new DMap(null, new HashMap<>());
+		DMap root = new DMap(null, null, new HashMap<>());
 
-		DValues values1 = root.get("tickets", "subtickets").asArray();
-
+		DValues values1 = root.get("tickets", "subtickets").asValues();
 		
-		DValues voucherIds = root.get("vouchers", "id").asArray();
+		DValues voucherIds = root.get("vouchers", "id").asValues();
 		
 		root.get("tickets", "subtickets")
 		  .stream()
 		    .filter(dv -> dv.get("voucherid").matchesOneOf(voucherIds));
 
 		
-		root.get("tickets", "subtickets")
+		root.get("tickets", "subtickets").asValues()
 			.withMatching("voucherid", voucherIds)
 			 .stream();
 		
 		voucherIds.stream()
-		  .map(root.get("tickets", "subtickets").withMatchingField("voucherid"));
-				
+		  .map(root.get("tickets", "subtickets")
+				  	.asValues()
+				  	.withMatchingField("voucherid"))
+		  			.singleValue();
+				//value <- arraxy <- array <- filter <- single
 		/*
 		 * 
 		 * TODO
@@ -46,9 +51,13 @@ public class JData {
 		
 		
 	}
-	
 }
 
+/**
+ * a point in the data hierarchy from where to search
+ * @author scott
+ *
+ */
 interface DPoint {
 	DPoint getParent();
 
@@ -72,43 +81,51 @@ class EmptyPoint implements DPoint {
 
 	@Override
 	public DValue get(String ...names) {
-		return new DValue(this, names[0], null);
+		//TODO: propertly nest
+		return new DScalar(this, names[0], null);
 	}
 
 	@Override
 	public DValues getAll(String... name) {
+		//TODO:
 		return null;
 	}
 	
 }
 
 
+interface DValue extends DPoint {
+	DPoint getParent();
 
-class DValue implements DPoint {
+	boolean matchesOneOf(DValues values);
+
+	String getField();
+
+	Object getActual();
+			
+	Stream<DValue> stream();
+	
+	DValues asValues();
+}
+
+class DScalar implements DValue {
 	private final DPoint parent;
 	private final String field;
 	private final Object value;
-	public DValue(DPoint parent, String field, Object value) {
+	public DScalar(DPoint parent, String field, Object value) {
 		this.parent = parent;
 		this.field = field;
 		this.value = value;
 	}
 	
-	public Function<DValue,DValue> withMatchingField(String fieldName) {
-		return (dv) -> 
-			new LinkedList<DValue>().stream()
-				.filter(mydv -> mydv.get(fieldName).equals(dv))
-				.findFirst()
-				.orElse(null);
+	@Override
+	public boolean matchesOneOf(DValues values) {
+		//TODO:
+		return false;
 	}
 
 	public DFilter withMatching(String field, DValues valuesToMatch) {
 		return null;
-	}
-
-	public boolean matchesOneOf(DValues values) {
-		// TODO Auto-generated method stub
-		return true;
 	}
 
 	@Override
@@ -116,6 +133,7 @@ class DValue implements DPoint {
 		return parent;
 	}
 
+	@Override
 	public String getField() {
 		return field;
 	}
@@ -123,27 +141,12 @@ class DValue implements DPoint {
 	public Object getValue() {
 		return value;
 	}
-		
-//	public DPoint asPoint() {
-////		if (value instanceof Map) {
-////			return new DMap(parent, (Map<String,Object>)value);
-////		}
-////		return new EmptyPoint(parent, field);
-//		return th
-//	}
-	
+			
+	@Override
 	public Stream<DValue> stream() {
-		return asArray().stream();
-	}
-
-	public DArray asArray() {
-		return DArray.of(this);
+		return Collections.<DValue>singletonList(this).stream();
 	}
 	
-	public boolean isArray() {
-		return DArray.isArray(this);
-	}
-
 	@Override
 	public DValue get(String... name) {
 		return null;
@@ -154,8 +157,18 @@ class DValue implements DPoint {
 		// TODO Auto-generated method stub
 		return null;
 	}
-	
-	
+
+	@Override
+	public Object getActual() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public DValues asValues() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
 
 abstract class DValues {
@@ -164,6 +177,18 @@ abstract class DValues {
 		return new DFilter(this, predicate);
 	}
 	
+	public Function<DValue,DValue> withMatchingField(String fieldName) {
+		return (dv) -> 
+			new LinkedList<DValue>().stream()
+				.filter(mydv -> mydv.get(fieldName).equals(dv))
+				.findFirst()
+				.orElse(null);
+	}
+
+	public DFilter withMatching(String string, DValues values) {
+		return null;
+	}
+
 	public abstract Stream<DValue> stream();
 }
 
@@ -184,30 +209,92 @@ class DFilter extends DValues {
 }
 
 
-class DArrayItem extends DValue {
+class DArrayItem implements DValue {
 	private final DArray array;
 	private final int index;
 
 	public DArrayItem(DArray array, int index) {
-		super(array, array.getField(), getValue(array, index));
 		this.array = array;
 		this.index = index;
 	}
-	
+
+	@Override
+	public boolean matchesOneOf(DValues values) {
+		//TODO:
+		return false;
+	}
+
+
+
 	private static Object getValue(DArray array, int index) {
 		return null;
 	}
-}
 
-class DArray extends DValues implements DPoint {
-	private final DValue array;
-	private DArray(DValue array) {
-		this.array = array;
+	@Override
+	public DValue get(String... name) {
+		// TODO Auto-generated method stub
+		return null;
 	}
-		
+
+	@Override
+	public DValues getAll(String... name) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 	@Override
 	public DPoint getParent() {
-		return array.getParent();
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String getField() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object getActual() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Stream<DValue> stream() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+	@Override
+	public DValues asValues() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+}
+
+class DArray extends DValues implements DValue {
+	private final List<Object> list;
+	private final DPoint parent;
+	private final String field;
+	public DArray(DPoint parent, String field, List<Object> list) {
+		this.parent = parent;
+		this.field = field;
+		this.list = list;
+	}
+
+	@Override
+	public boolean matchesOneOf(DValues values) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+
+	@Override
+	public DPoint getParent() {
+		return parent;
 	}
 
 	@Override
@@ -223,43 +310,70 @@ class DArray extends DValues implements DPoint {
 	}
 
 	public String getField() {
-		return array.getField();
-	}
-	
-	public static DArray of(DValue value) {
-		return new DArray(value);
+		return field;
 	}
 
-	public static boolean isArray(DValue value) {
-		return value.getValue() instanceof List;
-	}
-	
 	public DArrayItem get(int index) {
-		if (array.getValue() instanceof List) {
-			return new DArrayItem(this, index);
+		if (index >= list.size()) {
+			throw new ArrayIndexOutOfBoundsException(index);
 		}
-		else if (index == 0) {
-			return new DArrayItem(this, index);
-		}
-		throw new ArrayIndexOutOfBoundsException(index);
+		return new DArrayItem(this, index);
 	}
 
 	@Override
 	public Stream<DValue> stream() {
-		if (array.getValue() instanceof List) {
-				//foreach item create array item
+		//TODO: natively use stream
+		return toDArrayItems().stream();
+	}
+	
+	private List<DValue> toDArrayItems() {
+		List<DValue> result = new ArrayList<>(list.size());
+		for (int i=0; i<list.size(); i++) {
+			result.add(new DArrayItem(this, i));
 		}
-		return Collections.singletonList(array).stream();
+		return result;
+	}
+
+	@Override
+	public Object getActual() {
+		return list;
+	}
+
+	@Override
+	public DValues asValues() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }
 
-class DMap implements DPoint {
+class DValueFac {
+	
+	public static DValue asValue(DPoint parent, String field, Object object) {
+		if (object instanceof List) {
+			return new DArray(parent, field, (List<Object>)object);
+		}
+		else if (object instanceof Map) {
+			return new DMap(parent, field, (Map<String, Object>)object);
+		}
+		return new DScalar(parent, field, object);
+	}
+}
+
+class DMap implements DValue {
 	private final DPoint parent;
+	private final String field;
 	private final Map<String,Object> data;
 
-	public DMap(DPoint parent, Map<String, Object> data) {
+	public DMap(DPoint parent, String field, Map<String, Object> data) {
 		this.parent = parent;
+		this.field = field;
 		this.data = data;
+	}
+	
+	@Override
+	public boolean matchesOneOf(DValues values) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 	@Override
@@ -271,7 +385,7 @@ class DMap implements DPoint {
 	public DValue get(String ...names) {
 		LinkedList<String> parts = new LinkedList<>(Arrays.asList(names));
 		String name = parts.getFirst();
-		DValue value = new DValue(this, name, data.get(name));
+		DValue value = DValueFac.asValue(this, name, data.get(name));
 		if (parts.size() == 1) {
 			return value;
 		}
@@ -286,6 +400,29 @@ class DMap implements DPoint {
 		// TODO Auto-generated method stub
 		return null;
 	}
-	
+
+	@Override
+	public String getField() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object getActual() {
+		return data;
+	}
+
+	@Override
+	public Stream<DValue> stream() {
+		//each DValue has this map as it's parent and it's field is the map key.
+		return data.entrySet().stream()
+				.map(en -> DValueFac.asValue(this, en.getKey(), en.getValue()));
+	}
+
+	@Override
+	public DValues asValues() {
+		// TODO Auto-generated method stub
+		return null;
+	}	
 	
 }

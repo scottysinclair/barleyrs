@@ -5,19 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
 import static scott.barleyrs.rest.request.DPath.path;
 import static scott.barleyrs.rest.request.DPred.matches;
+import static scott.barleyrs.rest.request.Helper.collectAndPrint;
 
 public class JData {
 
@@ -59,8 +55,69 @@ public class JData {
 				= new TypeReference<HashMap<String,Object>>() {};
 		HashMap<String,Object> rootData = mapper.readValue(from, typeRef);
 
+
 		DValue root = DValueFac.asValue(null, null, rootData);
 
+		//get the array of order part views
+		DArray opArray  = root.get(path("orderPartViewDTO2s"));
+		System.out.println(opArray);
+
+		//get the id of the first order part view
+		DValue id1 = opArray.get(0).get(path("id"));
+		System.out.println(id1.getActual());
+
+		//get the id of the first order part view
+		try  {
+			opArray.get(1).get(path("id"));
+		}
+		catch(ArrayIndexOutOfBoundsException x) {}
+
+		//get all order part ids
+		DValues ids = root.getAll(path("orderPartViewDTO2s", "id"));
+		ids.stream().forEach(it -> System.out.println(it.getActual()));
+
+
+
+		DValues poIdsForAllVouchers = root.getAll(path("orderPartViewDTO2s", "voucher", "print_object", "id"));
+		System.out.println("print object ids across all vouchers");
+		poIdsForAllVouchers.stream().forEach(it -> System.out.println(it.getActual()));
+
+
+		/*
+		 * all no class passeners across whole dataset
+		 */
+		DValues noClPass = root.getAll(path("orderPartViewDTO2s", "voucher", "product_details", "pricing", "no_class", "parts", "passengers"));
+		System.out.println("NO CLASS PASS");
+		noClPass.stream().forEach(it -> System.out.println(it.getActual()));
+
+
+		DValues passengers = root.getAll(path("orderPartViewDTO2s", "journeys", "passengerData", "passengers"));
+		System.out.println("=====================");
+		passengers.stream()
+				.forEach(it -> System.out.println(((DValue) it).getActual()));
+
+		System.out.println("000000000000000000000000000000000000000000000000=");
+		noClPass
+			/*
+			 * cross product of all noClPass IDS and passengers
+			 */
+		  .crossProduct("pid", "passengers", passengers)
+
+		  /*
+		   * filter where noClPass == passengers.@id
+		   */
+		  .filter(matches(path("pid"), path("passengers", "@id")))
+
+		  /*
+		   * stream and print
+		   */
+		  .stream()
+			//.forEach(it -> System.out.println("!!!!" + it.get(path("pid")).getActual() + "  " + it.get(path("passengers")).getActual()));
+
+
+
+
+/*
 		DValues voucherIds = root.getAll(path("vouchers", "id"));
 
 		DValues subTickets = root.getAll(path("tickets", "subtickets"));
@@ -71,7 +128,7 @@ public class JData {
 
 				//filter where (vid == subTicket.id
 				.filter(matches(path("vid"), path("subTickets", "id")));
-
+*/
 
 		/*
 		root.get(path("tickets", "subtickets"))
@@ -101,6 +158,17 @@ public class JData {
 
 		
 		
+	}
+}
+
+class Helper {
+	public static <T> Stream<T> collectAndPrint(Object ctx, Stream<T> stream) {
+		return stream;
+		/*
+		List<T> list = stream.collect(Collectors.toList());
+		System.out.println(ctx + " ==> " + list);
+		return list.stream();
+		*/
 	}
 }
 
@@ -184,7 +252,7 @@ class DPred {
 interface DPoint {
 	DPoint getParent();
 
-	DValue get(DPath path);
+	<T extends DValue >T get(DPath path);
 
 	DValues getAll(DPath path);
 }
@@ -257,7 +325,7 @@ class DScalar implements DValue {
 
 	@Override
 	public boolean matches(DValue value) {
-		return false;
+		return Objects.equals(getActual(), value.getActual());
 	}
 
 	@Override
@@ -281,14 +349,21 @@ class DScalar implements DValue {
 			
 	@Override
 	public Stream<DValue> stream() {
+		if (value == null) {
+			return Collections.<DValue>emptyList().stream();
+		}
 		return Collections.<DValue>singletonList(this).stream();
 	}
 
 
 	@Override
 	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues otherValues) {
-		return new DGroups(stream()
-				.map(v -> new DGroup(myGroupKey, this, otherGroupKey, otherValues)));
+		//DGroup group = new DGroup(myGroupKey, this, otherGroupKey, otherValues);
+		DValue me = this;
+		List<DGroup> groups = otherValues.stream()
+				.map(ov -> new DGroup(myGroupKey, me, otherGroupKey, ov))
+				.collect(Collectors.toList());
+		return new DGroups(groups);
 	}
 
 	@Override
@@ -306,25 +381,21 @@ class DScalar implements DValue {
 
 	@Override
 	public DValues getAll(DPath path) {
-		DPath first = path.first();
-		DValue value = DValueFac.asValue(this, first.name(), null);
-		if (path.size() == 1) {
-			return new DEmptyValues(this, first.name());
-		}
-		else {
-			DPath rest = path.tail();
-			return value.getAll(rest);
-		}
+		return new DEmptyValues(this, path);
 	}
 
 	@Override
 	public Object getActual() {
-		// TODO Auto-generated method stub
-		return null;
+		return value;
 	}
 
-
-
+	@Override
+	public String toString() {
+		if (parent != null) {
+			return parent.toString() + " <- " + field + "(DScalar "  + value + ")";
+		}
+		return "(DScalar " + value + ")";
+	}
 }
 
 abstract class DValues {
@@ -344,22 +415,29 @@ abstract class DValues {
 	public abstract Stream<? extends DValue> stream();
 
 	public DGroups crossProduct(String myGroupKey, String otherGroupKey, DValues otherValues) {
-		//for each id, stream otherValues
-		return new DGroups(stream()
-				.map(v -> v.flatMapThenMerge(myGroupKey, otherGroupKey, otherValues))
-				.flatMap(DGroups::stream));
-
+		// for each id, stream otherValues
+		return new DGroups(
+        	stream()
+             .map(v -> v.flatMapThenMerge(myGroupKey, otherGroupKey, otherValues))
+            .flatMap(DGroups::stream)
+			.collect(Collectors.toList()));
 	}
 
+	public abstract DValues getAll(DPath rest);
 }
 
 class DEmptyValues extends DValues {
 	private DPoint parent;
-	private String field;
+	private DPath path;
 
-	public DEmptyValues(DPoint parent, String field) {
+	public DEmptyValues(DPoint parent, DPath path) {
 		this.parent = parent;
-		this.field = field;
+		this.path = path;
+	}
+
+	@Override
+	public DValues getAll(DPath path) {
+		return this;
 	}
 
 	@Override
@@ -381,15 +459,21 @@ class DEmptyValues extends DValues {
  * A stream of groups
  */
 class DGroups extends DValues  {
-	private final Stream<DGroup> groups;
+	private final List<DGroup> groups;
 
-	public DGroups(Stream<DGroup> groups) {
+	public DGroups(List<DGroup> groups) {
 		this.groups = groups;
+		//this.groups = collectAndPrint(this, groups);
 	}
 
 	@Override
 	public Stream<DGroup> stream() {
-		return groups;
+		return groups.stream();
+	}
+
+	@Override
+	public DValues getAll(DPath rest) {
+		return null;
 	}
 }
 
@@ -399,7 +483,7 @@ class DGroups extends DValues  {
 class DGroup implements DValue  {
 	private final Map<Object, Object> contents = new HashMap<>();
 
-	public DGroup(String valueAKey, DValue a, String valueBKey, DValues b) {
+	public DGroup(String valueAKey, DValue a, String valueBKey, DValue b) {
 		contents.put(valueAKey, a);
 		contents.put(valueBKey, b);
 	}
@@ -416,7 +500,12 @@ class DGroup implements DValue  {
 
 	@Override
 	public DValue get(DPath path) {
-		return null;
+		DPath first = path.first();
+		DValue dvalue = DValueFac.asValue(this, first.name(), contents.get(first.name()));
+		if (path.size() == 1) {
+			return dvalue;
+		}
+		return dvalue.get(path.tail());
 	}
 
 	@Override
@@ -454,6 +543,49 @@ class DGroup implements DValue  {
 		return null;
 	}
 
+}
+
+/**
+ * A projection of a single field across many values
+ * so users* -> userids* - via user.id
+ */
+class DFieldAcrossValues extends DValues {
+	private final DValues parent;
+	private final String field;
+	public DFieldAcrossValues(DValues parent, String field) {
+		this.parent = parent;
+		this.field = field;
+	}
+
+	@Override
+	public DValues getAll(DPath path) {
+		DPath first = path.first();
+		DFieldAcrossValues fieldAcross = new DFieldAcrossValues(this, first.name());
+		if (path.size() == 1) {
+			return fieldAcross;
+		}
+		else {
+			DPath rest = path.tail();
+			return fieldAcross.getAll(rest);
+		}
+	}
+
+	@Override
+	public Stream<? extends DValue> stream() {
+		return collectAndPrint(this, parent.stream())
+				//for each DV get all values for the field
+				.map(dv -> ((DValue) dv).getAll(path(field)))
+				//flatmap to stream dv
+				.flatMap(DValues::stream);
+	}
+
+	@Override
+	public String toString() {
+		if (parent != null) {
+			return parent.toString() + " <- " + field + " (FAMV)";
+		}
+		return String.valueOf(field) + " (FAMV)";
+	}
 }
 
 
@@ -467,25 +599,30 @@ class DFilter extends DValues {
 	}
 
 	@Override
-	public Stream<? extends DValue> stream() {
-		return source.stream().filter(predicate);
+	public DValues getAll(DPath path) {
+		return null;
 	}
-	
+
+	@Override
+	public Stream<? extends DValue> stream() {
+		return collectAndPrint(this, source.stream()).filter(predicate);
+	}
 }
 
 
 class DArrayItem implements DValue {
 	private final DArray array;
 	private final int index;
+	private final DValue dvalue;
 
 	public DArrayItem(DArray array, int index) {
 		this.array = array;
 		this.index = index;
+		this.dvalue = DValueFac.asValue(this, "array-item", array.getActual().get(index));
 	}
 
 	@Override
 	public boolean matchesOneOf(DValues values) {
-		//TODO:
 		return false;
 	}
 
@@ -499,49 +636,48 @@ class DArrayItem implements DValue {
 		return false;
 	}
 
-	private static Object getValue(DArray array, int index) {
-		return null;
-	}
 
 	@Override
 	public DValue get(DPath path) {
-		// TODO Auto-generated method stub
-		return null;
+		return dvalue.get(path);
 	}
 
 	@Override
 	public DValues getAll(DPath path) {
-		// TODO Auto-generated method stub
-		return null;
+		return dvalue.getAll(path);
 	}
 
 	@Override
 	public DPoint getParent() {
-		// TODO Auto-generated method stub
-		return null;
+		return array;
 	}
 
 	@Override
 	public String getField() {
-		// TODO Auto-generated method stub
-		return null;
+		return "" + index;
 	}
 
 	@Override
 	public Object getActual() {
-		// TODO Auto-generated method stub
-		return null;
+		return dvalue.getActual();
 	}
 
 	@Override
-	public Stream<DValue> stream() {
-		// TODO Auto-generated method stub
-		return null;
+	public Stream<DArrayItem> stream() {
+		return Collections.singletonList(this).stream();
 	}
 
 	@Override
 	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
-		return null;
+		return dvalue.flatMapThenMerge(myGroupKey, otherGroupKey, values);
+	}
+
+	@Override
+	public String toString() {
+		if (array != null) {
+			return array.toString() + " <- " + index+ " (DArrayIndex)";
+		}
+		return String.valueOf(index) + " (DArrayIndex)";
 	}
 }
 
@@ -585,8 +721,15 @@ class DArray extends DValues implements DValue {
 	
 	@Override
 	public DValues getAll(DPath path) {
-		// TODO Auto-generated method stub
-		return null;
+		DPath first = path.first();
+		DFieldAcrossValues fieldAcross = new DFieldAcrossValues(this, first.name());
+		if (path.size() == 1) {
+			return fieldAcross;
+		}
+		else {
+			DPath rest = path.tail();
+			return fieldAcross.getAll(rest);
+		}
 	}
 
 	public String getField() {
@@ -620,14 +763,26 @@ class DArray extends DValues implements DValue {
 	}
 
 	@Override
-	public Object getActual() {
+	public List<Object> getActual() {
 		return list;
+	}
+
+	@Override
+	public String toString() {
+		if (parent != null) {
+			return parent.toString() + "<- " + field + " (DArray)";
+		}
+		return String.valueOf(field) + " (DArray)";
+
 	}
 }
 
 class DValueFac {
 	
 	public static DValue asValue(DPoint parent, String field, Object object) {
+		if (object instanceof  DValue) {
+			return (DValue)object;
+		}
 		if (object instanceof List) {
 			return new DArray(parent, field, (List<Object>)object);
 		}
@@ -724,5 +879,12 @@ class DMap implements DValue {
 		return null;
 	}
 
+	@Override
+	public String toString() {
+		if (parent != null) {
+			return parent.toString() + "<- " + field + " (DMap)";
+		}
+		return String.valueOf(field) + " (DMap)";
+	}
 }
 

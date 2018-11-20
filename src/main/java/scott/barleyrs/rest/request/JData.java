@@ -64,6 +64,9 @@ public class JData {
 		 */
 		DValues noClassPass = root.getAll(path("orderPartViewDTO2s", "voucher", "product_details", "pricing", "no_class", "parts", "passengers"));
 
+		DValues parts = noClassPass.getParentValues();
+		
+		
 		/*
 		 * all passengers in the journey data
 		 */
@@ -352,6 +355,8 @@ abstract class DValues {
 		return new DFilter(this, predicate);
 	}
 	
+	public abstract DValues getParentValues();
+
 	public DFilter withMatchingField(String fieldName) {
 		return new DFilter(this, (dv ) -> dv.get(path(fieldName)).matches(null));
 	}
@@ -380,6 +385,11 @@ class DEmptyValues extends DValues {
 	public DEmptyValues(DPoint parent, DPath path) {
 		this.parent = parent;
 		this.path = path;
+	}
+	
+	@Override
+	public DValues getParentValues() {
+		return null;
 	}
 
 	@Override
@@ -410,6 +420,11 @@ class DAdhocValues extends DValues {
 	}
 
 	@Override
+	public DValues getParentValues() {
+		return null;
+	}
+
+	@Override
 	public Stream<? extends DValue> stream() {
 		return Collections.singletonList(value).stream();
 	}
@@ -432,6 +447,11 @@ class DGroups extends DValues  {
 
 	public DGroups(Stream<DGroup> groups) {
 		this.groups = new DStreamHolder<>(groups);
+	}
+
+	@Override
+	public DValues getParentValues() {
+		return null;
 	}
 
 	@Override
@@ -462,6 +482,11 @@ class DGroup extends DValues implements DValue  {
 	public DGroup(String valueAKey, DValue a, String valueBKey, DValue b) {
 		contents.put(valueAKey, a);
 		contents.put(valueBKey, b);
+	}
+
+	@Override
+	public DValues getParentValues() {
+		return null;
 	}
 
 	@Override
@@ -543,6 +568,11 @@ class DFieldAcrossValues extends DValues {
 	}
 
 	@Override
+	public DValues getParentValues() {
+		return parent;
+	}
+
+	@Override
 	public DValues getAll(DPath path) {
 		DPath first = path.first();
 		DFieldAcrossValues fieldAcross = new DFieldAcrossValues(this, first.name());
@@ -582,6 +612,11 @@ class DFilter extends DValues {
 		this.source = source;
 		this.predicate = predicate;
 	}
+	
+	@Override
+	public DValues getParentValues() {
+		return source;
+	}
 
 	@Override
 	public DValues getAll(DPath path) {
@@ -611,6 +646,13 @@ class DArray extends DValues implements DValue {
 		this.field = field;
 		this.list = list;
 	}
+
+	@Override
+	public DValues getParentValues() {
+		// return values for a parent point
+		return null;
+	}
+
 
 	@Override
 	public boolean matchesOneOf(DValues values) {

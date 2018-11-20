@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
@@ -19,35 +20,7 @@ public class JData {
 
 	public static void main(String args[]) throws IOException {
 
-		/*
-		DMap root = new DMap(null, null, new HashMap<>());
-
-		DValues values1 = root.get(path("tickets", "subtickets")).asValues();
-		
-		DValues voucherIds = root.get(path("vouchers", "id")).asValues();
-		
-		root.get(path("tickets", "subtickets"))
-		  .stream()
-		    .filter(dv -> dv.get(path("voucherid")).matchesOneOf(voucherIds));
-
-		
-		root.get(path("tickets", "subtickets")).asValues()
-			.withMatching("voucherid", voucherIds)
-			 .stream();
-
-		//value <- array <- array <- filter <- single
-
-		//values <- filter (eq 3)
-		//values <- filter (eq (point + path))
-
-		//voucherids <- group (voucherids + values) <- get (filter (eq (value path), voucherid))
-		//voucherids <- group (voucherids  values) <- get ("values" <- filter (eq (value path), "voucherids"))
-
-
-		//voucherids <- (group (vid  values))* <- filter ("values " (eq (value path), "voucherids"))) getSingle
-
-		//voucherids  <- (id subt*)*  <- (id subt)* <- CHECK (id subt)*
-*/
+		//voucherids  <- (id subt)*  <- filter matching
 
 		File from = new File("src/test/resources/misc.json");
 		ObjectMapper mapper = new ObjectMapper();
@@ -102,25 +75,6 @@ public class JData {
 		allPassengers.stream()
 				.forEach(it -> System.out.println(((DValue) it).getActual()));
 */
-		System.out.println("000000000000000000000000000000000000000000000000=");
-		noClassPass
-			/*
-			 * cross product of all noClPass IDS and passengers
-			 */
-		  .crossProduct("pid", "passenger", allPassengers)
-
-		  /*
-		   * filter where noClPass == passengers.@id
-		   */
-		  .filter(matches(path("pid"), path("passenger", "@id")))
-
-		  /*
-		   * stream and print
-		   */
-		  .stream()
-		  .map(dg -> (DValue)dg.get(path("passenger")))
-		  .forEach(it -> System.out.println("!!!!! " + it.getActual()));
-    							  
 			//.forEach(it -> System.out.println("!!!!" + it.get(path("pid")).getActual() + "  " + it.get(path("passengers")).getActual()));
 
 		
@@ -638,78 +592,6 @@ class DFilter extends DValues {
 	}
 }
 
-
-class DArrayItem implements DValue {
-	private final DArray array;
-	private final int index;
-	private final DValue dvalue;
-
-	public DArrayItem(DArray array, int index) {
-		this.array = array;
-		this.index = index;
-		this.dvalue = DValueFac.asValue(this, "array-item", array.getActual().get(index));
-	}
-
-	@Override
-	public boolean matchesOneOf(DValues values) {
-		return false;
-	}
-
-	@Override
-	public boolean matches(DValue value) {
-		return false;
-	}
-
-	@Override
-	public boolean matches(Object object) {
-		return false;
-	}
-
-
-	@Override
-	public DValue get(DPath path) {
-		return dvalue.get(path);
-	}
-
-	@Override
-	public DValues getAll(DPath path) {
-		return dvalue.getAll(path);
-	}
-
-	@Override
-	public DPoint getParent() {
-		return array;
-	}
-
-	@Override
-	public String getField() {
-		return "" + index;
-	}
-
-	@Override
-	public Object getActual() {
-		return dvalue.getActual();
-	}
-
-	@Override
-	public Stream<DArrayItem> stream() {
-		return Collections.singletonList(this).stream();
-	}
-
-	@Override
-	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
-		return dvalue.flatMapThenMerge(myGroupKey, otherGroupKey, values);
-	}
-
-	@Override
-	public String toString() {
-		if (array != null) {
-			return array.toString() + " <- " + index+ " (DArrayIndex)";
-		}
-		return String.valueOf(index) + " (DArrayIndex)";
-	}
-}
-
 class DArray extends DValues implements DValue {
 	private final List<Object> list;
 	private final DPoint parent;
@@ -765,30 +647,22 @@ class DArray extends DValues implements DValue {
 		return field;
 	}
 
-	public DArrayItem get(int index) {
+	public DValue get(int index) {
 		if (index >= list.size()) {
 			throw new ArrayIndexOutOfBoundsException(index);
 		}
-		return new DArrayItem(this, index);
+		return DValueFac.asValue(parent, "" + index, list.get(index));
 	}
 
 	@Override
 	public Stream<DValue> stream() {
-		//TODO: natively use stream
-		return toDArrayItems().stream();
+		return IntStream.range(0, list.size())
+				.mapToObj(this::get);
 	}
 
 	@Override
 	public DGroups flatMapThenMerge(String myGroupKey, String otherGroupKey, DValues values) {
 		return null;
-	}
-
-	private List<DValue> toDArrayItems() {
-		List<DValue> result = new ArrayList<>(list.size());
-		for (int i=0; i<list.size(); i++) {
-			result.add(new DArrayItem(this, i));
-		}
-		return result;
 	}
 
 	@Override

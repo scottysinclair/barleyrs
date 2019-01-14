@@ -29,10 +29,7 @@ import org.glassfish.jersey.jackson.JacksonFeature;
 
 import org.glassfish.jersey.server.ResourceConfig;
 
-import scott.barleyrs.rest.AdminService;
-import scott.barleyrs.rest.CrudService;
-import scott.barleyrs.rest.EntityResultMessageBodyWriter;
-import scott.barleyrs.rest.QueryResultMessageBodyWriter;
+import scott.barleyrs.rest.*;
 
 public class Application extends ResourceConfig {
     public Application() {
@@ -41,5 +38,6 @@ public class Application extends ResourceConfig {
         register(JacksonFeature.class);
         register(AdminService.class);
         register(CrudService.class);
+        register(GraphQLService.class);
     }
 }

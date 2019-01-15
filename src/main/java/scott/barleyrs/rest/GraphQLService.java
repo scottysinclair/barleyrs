@@ -13,6 +13,7 @@ import scott.barleydb.api.core.Environment;
 import scott.barleydb.api.exception.BarleyDBException;
 import scott.barleydb.api.graphql.BarleyGraphQLSchema;
 import scott.barleydb.api.graphql.GraphQLContext;
+import scott.barleydb.api.graphql.GraphQLExecutionException;
 import scott.barleydb.api.specification.SpecRegistry;
 import scott.barleydb.bootstrap.JdbcEnvironmentBootstrap;
 
@@ -64,14 +65,16 @@ public class GraphQLService {
             @PathParam("namespace") String namespace,
             Map<String,Object> body) throws BarleyDBException {
 
-        System.out.println("HELLO!!!!!!!!!!!!!");
-
         BarleyGraphQLSchema schema = getOrCreate(namespace);
         GraphQLContext ctx = schema.newContext();
         String query = (String)body.get("query");
-        Object result = ctx.execute(query);
-        System.out.println("DONE!!!!!!!!!!!!!");
-        return result;
+        try {
+            Object result = ctx.execute(query);
+            return result;
+        }
+        catch(GraphQLExecutionException x) {
+            return x.getErrors();
+        }
     }
 
     private synchronized BarleyGraphQLSchema getOrCreate(String namespace) {

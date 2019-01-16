@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 
@@ -45,7 +46,7 @@ import static java.util.Objects.requireNonNull;
  */
 
 @Path("/barleyrs")
-@Component
+@Singleton
 public class GraphQLService {
 
     @Inject
@@ -56,6 +57,18 @@ public class GraphQLService {
     private JdbcEnvironmentBootstrap bootstrap;
 
     private Map<String,BarleyGraphQLSchema> schemasByNamespace = new HashMap<>();
+
+    @GET
+    @Path("/graphql/{namespace}")
+    @Produces(MediaType.TEXT_PLAIN)
+    public String showSchema(
+            @PathParam("namespace") String namespace,
+            Map<String,Object> body) throws BarleyDBException {
+
+        BarleyGraphQLSchema schema = getOrCreate(namespace);
+        return schema.getSdlString();
+    }
+
 
     @POST
     @Path("/graphql/{namespace}")
